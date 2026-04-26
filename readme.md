@@ -43,7 +43,6 @@ $ffmpeg -framerate 15 -i generated-images/linear-dissolve/inter_%d.jpg generated
 $ffmpeg -framerate 15 -i generated-images/linear-dissolve/inter_%d.jpg generated-images/linear-dissolve/output.mp4
 
 
-
 <strong>If you find any difficulty in the steps above you can refer to the video attached of the same.</strong>
 
 <b>Note - The code is explained in the report itself.</b>
