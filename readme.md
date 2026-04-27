@@ -81,12 +81,12 @@ CS445-final-project-image-morphing/
 │
 ├── generated-images                # Directory saving all generated intermediate morphing images and generated MP4 and GIF files
 │        ├── laplacian-pyrimid-blending
-│                 ├── inter_1.jpg
-│                 ├── inter_2.jpg
-│                 ├── ..........
-│                 ├── inter_100.jpg
-│                 ├── output.gif
-│                 └── output.mp4
+│        │        ├── inter_1.jpg
+│        │        ├── inter_2.jpg
+│        │        ├── ..........
+│        │        ├── inter_100.jpg
+│        │        ├── output.gif
+│        │        └── output.mp4
 │        └── linear-dissolve
 │                 ├── inter_1.jpg
 │                 ├── inter_2.jpg
@@ -102,7 +102,7 @@ CS445-final-project-image-morphing/
 │   ├── output.gif
 │   └── output.mp4
 │
-├── main.py                         # This is the entrance python file
+├── main.py                         # This is the entrance Python file
 │
 ├── input-images                    # Directory for two input images
 │   ├── img1.png 
@@ -114,7 +114,7 @@ CS445-final-project-image-morphing/
 │   ├── triangulation.py
 │   └── warp.py
 │
-├── multi-input-images              # Directory for multiple input images which will be used to generate multiple continuous morphing effect
+├── multi-input-images              # Directory for multiple input images, which will be used to generate multiple continuous morphing effects
 │   ├── multi-image1.png
 │   ├── multi-image2.png
 │   ├── multi-image3.png
