@@ -45,6 +45,9 @@ $ffmpeg -version
 ```text
 $ffmpeg -framerate 15 -i generated-images/linear-dissolve/inter_%d.jpg generated-images/linear-dissolve/output.gif
 $ffmpeg -framerate 15 -i generated-images/linear-dissolve/inter_%d.jpg generated-images/linear-dissolve/output.mp4
+
+$ffmpeg -framerate 15 -i generated-images/laplacian-pyrimid-blending/inter_%d.jpg generated-images/laplacian-pyrimid-blending/output.gif
+$ffmpeg -framerate 15 -i generated-images/laplacian-pyrimid-blending/inter_%d.jpg generated-images/laplacian-pyrimid-blending/output.mp4
 ```
 
 <strong>If you find any difficulty in the steps above you can refer to the video attached of the same.</strong>
@@ -74,6 +77,12 @@ CS445-final-project-image-morphing/
 │
 ├── generated-images                # Directory saving all generated intermediate morphing images and generated MP4 and GIF files
 │        ├── laplacian-pyrimid-blending
+│                 ├── inter_1.jpg
+│                 ├── inter_2.jpg
+│                 ├── ..........
+│                 ├── inter_100.jpg
+│                 ├── output.gif
+│                 └── output.mp4
 │        └── linear-dissolve
 │                 ├── inter_1.jpg
 │                 ├── inter_2.jpg
