@@ -30,9 +30,20 @@ here img1 refers to the source image and img2 refers to the destination image.
 
 <strong>Step-2</strong> Enter the control points on img1 using mouse click and press escape after entering all points. Do the same for img2 but the order of points should remain same.
 
+The program now automatically adds boundary anchor points around the image border (corners plus quarter-edge anchors), so you only need to click the meaningful feature points manually.
+
 After doing so the system will display as well as save the triangulated images.
 
 <strong>Step-3</strong> Enter the number of intermediate images you want to see (This number should exclude the source and destination image as they are already taken care of).
+
+Before entering that number, the program now asks you to choose a morphing method:
+```text
+affine-linear
+affine-laplacian
+tps-linear
+tps-laplacian
+```
+Use the `tps-*` options for Thin Plate Spline based advanced warping.
 
 The code will take some time to create and save the desired number of intermediates. We have directly saved the images to save the time.
 
@@ -53,6 +64,12 @@ $ffmpeg -framerate 15 -i generated-images/linear-dissolve/inter_%d.jpg generated
 
 $ffmpeg -framerate 15 -i generated-images/laplacian-pyrimid-blending/inter_%d.jpg generated-images/laplacian-pyrimid-blending/output.gif
 $ffmpeg -framerate 15 -i generated-images/laplacian-pyrimid-blending/inter_%d.jpg generated-images/laplacian-pyrimid-blending/output.mp4
+
+$ffmpeg -framerate 15 -i generated-images/tps-linear-dissolve/inter_%d.jpg generated-images/tps-linear-dissolve/output.gif
+$ffmpeg -framerate 15 -i generated-images/tps-linear-dissolve/inter_%d.jpg generated-images/tps-linear-dissolve/output.mp4
+
+$ffmpeg -framerate 15 -i generated-images/tps-laplacian-pyrimid-blending/inter_%d.jpg generated-images/tps-laplacian-pyrimid-blending/output.gif
+$ffmpeg -framerate 15 -i generated-images/tps-laplacian-pyrimid-blending/inter_%d.jpg generated-images/tps-laplacian-pyrimid-blending/output.mp4
 ```
 
 <strong>If you find any difficulty in the steps above you can refer to the video attached of the same.</strong>
