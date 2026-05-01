@@ -1,0 +1,42 @@
+# Python cache and build artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+build/
+dist/
+*.egg-info/
+
+# Virtual environments and local config
+.venv/
+venv/
+env/
+ENV/
+.env
+.env.*
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+
+# Office temporary lock files
+.~lock.*#
+~$*
+
+# Generated media exports
+*.gif
+*.mp4
+*.avi
+*.mov
+
+# Logs and temporary files
+*.log
+*.tmp
+*.bak
+
+CS445 Final Project Proposal.docx
