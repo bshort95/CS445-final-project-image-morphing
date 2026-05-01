@@ -61,90 +61,146 @@ def parse_args():
     )
     return parser.parse_args()
 
+from morph.warp import warp_image_affine_transform_with_linear_dissolve
+from morph.warp import warp_image_affine_transform_with_laplacian_pyrimid_blending
+from morph.tps import warp_image_tps_with_linear_dissolve
+from morph.tps import warp_image_tps_with_laplacian_pyrimid_blending
+from morph.triangulation import compute_delaunay
 
-def load_image(image_arg):
-    candidates = [Path("input-images") / image_arg, Path(image_arg)]
-    for path in candidates:
-        if path.exists():
-            image = cv2.imread(str(path))
-            if image is None:
-                raise ValueError(f"Unable to read image: {path}")
-            return image, path
-    raise FileNotFoundError(f"Could not find {image_arg} in input-images/ or as a direct path.")
+#######################################################################################################################################
+# CallBackFuncForimg1 
+# To get callback coordinates and draw circle at points clicked in source image which are the control points in source image 
+# CallBackFuncForimg2 
+# To get callback coordinates and draw circle at points clicked in destination image which are the control points in source image
+# getcoord
+# To get the coordinates from the user using left mouse button click and storing that values in a list. One can select as many control points along with border points but it should be greater then 3
+###########################################################################################################################################
 
+def CallBackFuncForimg1(event, x, y, flags, param):
+    if event == cv2.EVENT_LBUTTONDOWN:
+        cv2.circle(im1, (x,y), 1, (0, 0, 255), 2)
+        coordSrc.append((y,x))
 
-def collect_points(window, image, color):
-    points = []
-    display = image.copy()
-
-    def callback(event, x, y, flags, param):
-        if event == cv2.EVENT_LBUTTONDOWN:
-            cv2.circle(display, (x, y), 2, color, -1)
-            points.append((y, x))
-
-    cv2.namedWindow(window)
-    cv2.setMouseCallback(window, callback)
-    while True:
-        cv2.imshow(window, display)
+def CallBackFuncForimg2(event, x, y, flags, param):
+    if event == cv2.EVENT_LBUTTONDOWN:
+        cv2.circle(im2, (x,y), 1, (255, 0, 0), 2)
+        coordDest.append((y,x))
+        
+def getcoord(window,image):
+    while (True):
+        cv2.imshow(window, image)
         if cv2.waitKey(20) == 27:
             break
-    cv2.destroyWindow(window)
-    return np.array(points, dtype=np.float32)
+    cv2.destroyAllWindows()
 
 
-def collect_manual_correspondences(img1, img2, no_display=False):
-    if no_display:
-        print("No display is enabled; using boundary-anchor manual baseline.")
-        return get_manual_points(img1, img2)
+def add_default_boundary_points(coord, image_shape):
+    height, width = image_shape[:2]
+    row_quarters = [0, height // 4, height // 2, (3 * height) // 4, height - 1]
+    col_quarters = [0, width // 4, width // 2, (3 * width) // 4, width - 1]
+    boundary_points = [
+        (0, col_quarters[0]),
+        (0, col_quarters[1]),
+        (0, col_quarters[2]),
+        (0, col_quarters[3]),
+        (0, col_quarters[4]),
+        (row_quarters[1], 0),
+        (row_quarters[2], 0),
+        (row_quarters[3], 0),
+        (row_quarters[1], width - 1),
+        (row_quarters[2], width - 1),
+        (row_quarters[3], width - 1),
+        (height - 1, col_quarters[0]),
+        (height - 1, col_quarters[1]),
+        (height - 1, col_quarters[2]),
+        (height - 1, col_quarters[3]),
+        (height - 1, col_quarters[4]),
+    ]
 
-    print("Click source control points, then press Esc.")
-    points1 = collect_points("image1", img1, (0, 0, 255))
-    print("Click destination control points in the same order, then press Esc.")
-    points2 = collect_points("image2", img2, (255, 0, 0))
+    existing = set(coord)
+    for point in boundary_points:
+        if point not in existing:
+            coord.append(point)
+            existing.add(point)
+    return coord
 
-    if len(points1) != len(points2):
-        raise ValueError(
-            f"Manual correspondence count mismatch: source has {len(points1)}, destination has {len(points2)}."
-        )
-    if len(points1) < 3:
-        raise ValueError("At least three manual correspondences are required.")
+##############################################################################
+# draw_delauany(img,triangleList,delaunay_color)
+# To display the valid delaunany triangle in the image.
+# Arguments:
+# This function takes 3 arguments as img, triangleList and delaunay_color<br>
+# img - The image on which we have to draw the triangles<br>
+# triangleList - The list coordinates of the valid triangles.<br>
+# delauany_color - the color of the lines of the triangles.
+# 
+# return type: 
+# returns the image having the triangle.
+##############################################################################     
 
-    points1 = np.vstack([points1, boundary_anchors(img1.shape)])
-    points2 = np.vstack([points2, boundary_anchors(img2.shape)])
-    return remove_duplicate_correspondences(points1, points2)
+def draw_delaunay(img, triangleList,delaunay_color):
+    tri=[]
+    
+    for t in triangleList :
+        
+        pt1 = t[0]
+        pt2 = t[1]
+        pt3 = t[2]
 
-
-def draw_delaunay(img, triangle_list, color):
-    canvas = img.copy()
-    normalized = []
-    for triangle in triangle_list:
-        tri = [tuple(map(int, point)) for point in triangle]
-        pt1, pt2, pt3 = tri
-        cv2.line(canvas, (pt1[1], pt1[0]), (pt2[1], pt2[0]), color, 1)
-        cv2.line(canvas, (pt2[1], pt2[0]), (pt3[1], pt3[0]), color, 1)
-        cv2.line(canvas, (pt3[1], pt3[0]), (pt1[1], pt1[0]), color, 1)
-        normalized.append(tri)
-    return canvas, normalized
-
-
-def show_triangulated(img1, img2, triangles1, triangles2, no_display=False):
-    Path("Triangulated Images").mkdir(parents=True, exist_ok=True)
-    src_display, tri1 = draw_delaunay(img1, triangles1, (255, 0, 0))
-    dest_display, tri2 = draw_delaunay(img2, triangles2, (0, 255, 255))
-    cv2.imwrite("Triangulated Images/Triangulated Image_src.jpg", src_display)
-    cv2.imwrite("Triangulated Images/Triangulated Image_dest.jpg", dest_display)
-
-    if not no_display:
-        cv2.imshow("src", src_display)
-        cv2.imshow("dest", dest_display)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
-    return tri1, tri2
+        cv2.line(img, (pt1[1],pt1[0]), (pt2[1],pt2[0]), delaunay_color, 1)
+        cv2.line(img, (pt2[1],pt2[0]), (pt3[1],pt3[0]), delaunay_color, 1)
+        cv2.line(img, (pt3[1],pt3[0]), (pt1[1],pt1[0]), delaunay_color, 1)
+        a=[]
+        a.append(pt1)
+        a.append(pt2)
+        a.append(pt3)
+        tri.append(a)
+    return tri
 
 
-def triangulate(points1, points2, prefer_scipy=False):
-    method = "scipy" if prefer_scipy or len(points1) > 25 else "custom"
-    return triangulate_correspondences(points1, points2, method=method)
+##############################################################
+# showTriangulated(img1,img2)
+# To display the valid delaunany triangle in the image.
+# Arguments:
+# This function takes 2 arguments as img1 and img2
+# img1 = source image
+# img2 = destination image
+# return type:
+# returns the image having the triangle for further process.
+################################################################     
+
+def showTriangulated(img1,img2):
+    size = img1.shape
+    r = (0, 0, size[1], size[0])
+    
+    coord = coordSrc.copy()
+    
+    triangleList = compute_delaunay(coord)
+    
+    tri1 = draw_delaunay(img1,triangleList,(255,0,0))
+    
+    # Matching the point p0,..,pn of the source and destination image
+    tri2 = []
+    for i in range(len(tri1)):
+        a = []
+        for j in range(len(tri1[i])):
+            a.append(coordDest[coordSrc.index(tri1[i][j])])
+        tri2.append(a)
+        
+    tri2 = draw_delaunay(img2,tri2,(0,255,255))
+    
+    cv2.imshow("src",img1)
+    cv2.imshow("dest",img2)
+    cv2.imwrite("Triangulated Images/Triangulated Image_src.jpg",img1)
+    cv2.imwrite("Triangulated Images/Triangulated Image_dest.jpg",img2)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+    return tri1,tri2
+
+#################################################################
+# Reading of input images and resizing them to same size
+# img1=cv2.imread("bush.jpg")
+# img2=cv2.imread("clinton.jpg")
+#################################################################
 
 
 def get_output_dir(blend, correspondence, override=None):
@@ -165,6 +221,36 @@ def get_compare_output_dirs(blend, manual_override=None, auto_override=None):
         auto_output = "generated-images/auto-laplacian-pyrimid-blending"
     return manual_override or manual_output, auto_override or auto_output
 
+    if len(coordSrc) != len(coordDest):
+        raise ValueError("Source and destination images must have the same number of control points.")
+    if len(coordSrc) < 3:
+        raise ValueError("At least 3 control points are required.")
+
+    coordSrc = add_default_boundary_points(coordSrc, img1.shape)
+    coordDest = add_default_boundary_points(coordDest, img2.shape)
+    print("Added default boundary anchor points (corners plus quarter-edge anchors) to both images.")
+
+    method = input(
+        "Select morphing method ('affine-linear', 'affine-laplacian', 'tps-linear', 'tps-laplacian'): "
+    ).strip().lower()
+    no_of_intermed = int(input("Enter number of intermediate you want "))
+
+    if method.startswith("affine"):
+        # Triangulating the images and applying affine transformation
+        tri1,tri2 = showTriangulated(im1,im2)
+        print(f"@@ tri1 == {tri1}")
+        print(f"@@ tri2 == {tri2}")
+
+        if method == "affine-linear":
+            warp_image_affine_transform_with_linear_dissolve(no_of_intermed, img1, img2, tri1, tri2)
+        else:
+            warp_image_affine_transform_with_laplacian_pyrimid_blending(no_of_intermed, img1, img2, tri1, tri2)
+    elif method == "tps-linear":
+        warp_image_tps_with_linear_dissolve(no_of_intermed, img1, img2, coordSrc, coordDest)
+    elif method == "tps-laplacian":
+        warp_image_tps_with_laplacian_pyrimid_blending(no_of_intermed, img1, img2, coordSrc, coordDest)
+    else:
+        raise ValueError("Unknown morphing method selected.")
 
 def existing_frame_paths(frame_dir, frame_count):
     paths = [Path(frame_dir) / f"inter_{idx}.jpg" for idx in range(1, frame_count + 1)]
