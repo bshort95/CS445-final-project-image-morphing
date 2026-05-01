@@ -1,251 +1,133 @@
+from pathlib import Path
+
 import cv2
 import numpy as np
-from utils.image_utils import area
+
 from morph.blend import laplacian_pyrimid_blending
 
-#######################################################################################################################################################
-# ### isInsideTriangle(p1,p2,p3,x,y)
-# 
-# #### Use
-# >To check if some point lie inside the triangle or not. 
-# 
-# #### Arguments
-# >This function takes 8 arguments such that (x1,y1), (x2,y2), (x3,y3) are co-ordinates of the triangle and (x,y) is the point which we want to check.
-# 
-# #### return type 
-# >bool value<br>
-# >- True - point lies inside the triangle.<br>
-# >- False - point doesn't lie inside the triangle.
-#######################################################################################################################################################
 
-def isInsideTriangle(p1,p2,p3,x,y):
- 
-    A = area (p1[0], p1[1], p2[0], p2[1], p3[0], p3[1])
-    A1 = area (x, y, p2[0], p2[1], p3[0], p3[1])  
-    A2 = area (p1[0], p1[1], x, y, p3[0], p3[1])  
-    A3 = area (p1[0], p1[1], p2[0], p2[1], x, y)
-    if(A == A1 + A2 + A3):
-        return True
-    else:
-        return False
+def _row_col_to_xy(triangle):
+    tri = np.asarray(triangle, dtype=np.float32)
+    return np.column_stack([tri[:, 1], tri[:, 0]]).astype(np.float32)
 
 
-#########################################################################################
-# ### get_affine_basis(coord)
-# 
-# #### Use
-# >To Calculate the affine basis
-# 
-# #### Arguments
-# >This function takes only 1 argument which contains the co-ordinates of the triangle 
-# 
-# #### return type 
-# >float value of x and y component of both the affine basis of a triangle
-########################################################################################     
-
-def get_affine_basis(coord):
-    e1x = coord[1][0]-coord[0][0]
-    e1y = coord[1][1]-coord[0][1]
-    e2x = coord[2][0]-coord[0][0]
-    e2y = coord[2][1]-coord[0][1]
-    return e1x,e1y,e2x,e2y
-
-######################################################################################################################################
-# ### get_intermediate_triangles(srcTri,destTri,k,n)
-# 
-# #### Use
-# >To find the co-ordinates of the triangle in kth intermediate image corresponding to the triangle in Source and Destination Image.
-# 
-# #### Arguments
-# >This function take 4 arguments <br>
-# >- srcTri - coordinates of triangle in source image<br>
-# >- destTri - coordinates of triangle in destination image<br>
-# >- k - kth intermediate immage<br>
-# >- n - k+2
-# 
-# #### return type
-# >return the co-ordinates of the triangle in intermediate image by calculating it as:
-#     
-# <!-- $ \mathbf{Pk}= \left( \frac{n-k}{n} \right) \mathbf{P1}+\left(\frac{k}{n}\right)\mathbf{P2}$
-# 
-# $\mathbf{Pk}$ is calculated coordinate of triangle in intermediate kth image <br>
-# $\mathbf{P1}$ is triangle coordinate in Source image<br>
-# $\mathbf{P2}$ is triangle coordinate in Destination image      -->
-##################################################################################################################################### 
-
-def get_intermediate_triangles(srcTri , destTri , k , n):
-    intTri=[]
-    for (st,dt) in zip(srcTri,destTri):
-        a=[]
-        for (coordS,coordD) in zip(st,dt):
-            
-            xi=int(((n-k)/n)*coordS[0]+(k/n)*coordD[0])
-            yi=int(((n-k)/n)*coordS[1]+(k/n)*coordD[1])
-            a.append((xi,yi))
-        intTri.append(a)
+def get_intermediate_triangles(srcTri, destTri, k, n):
+    intTri = []
+    for st, dt in zip(srcTri, destTri):
+        tri = []
+        for coordS, coordD in zip(st, dt):
+            xi = int(((n - k) / n) * coordS[0] + (k / n) * coordD[0])
+            yi = int(((n - k) / n) * coordS[1] + (k / n) * coordD[1])
+            tri.append((xi, yi))
+        intTri.append(tri)
     return intTri
 
 
-# ### checkRange(sx,sy,dx,dy)
-# 
-# #### Use
-# >if sx,sy,dx,dy are out of range i.e if they are negative or greater than the size of image so this function normalize them
-# 
-# #### Arguments
-# >This function take 4 arguments <br>
-# >- (sx,sy) - coordinate in source image
-# >- (dx,dy) - coordinate in destination image
-# 
-# #### return type
-# >return the normalize co-ordinates    
+def _apply_affine_triangle(src, dst, src_tri, dst_tri):
+    src_xy = _row_col_to_xy(src_tri)
+    dst_xy = _row_col_to_xy(dst_tri)
+    if abs(cv2.contourArea(dst_xy)) < 1.0:
+        return
+
+    src_rect = cv2.boundingRect(src_xy)
+    dst_rect = cv2.boundingRect(dst_xy)
+    sx, sy, sw, sh = src_rect
+    dx, dy, dw, dh = dst_rect
+
+    if sw <= 0 or sh <= 0 or dw <= 0 or dh <= 0:
+        return
+
+    src_crop = src[sy : sy + sh, sx : sx + sw]
+    if src_crop.size == 0:
+        return
+
+    src_offset = src_xy - np.array([sx, sy], dtype=np.float32)
+    dst_offset = dst_xy - np.array([dx, dy], dtype=np.float32)
+    transform = cv2.getAffineTransform(src_offset, dst_offset)
+    warped = cv2.warpAffine(
+        src_crop,
+        transform,
+        (dw, dh),
+        flags=cv2.INTER_LINEAR,
+        borderMode=cv2.BORDER_REFLECT_101,
+    )
+
+    mask = np.zeros((dh, dw, 3), dtype=np.float32)
+    cv2.fillConvexPoly(mask, np.int32(dst_offset), (1.0, 1.0, 1.0), 16, 0)
+    dst_slice = dst[dy : dy + dh, dx : dx + dw]
+    dst[dy : dy + dh, dx : dx + dw] = dst_slice * (1.0 - mask) + warped * mask
 
 
-
-def checkRange(sx , sy , dx , dy, img1, img2):
-    if sx<0:
-        sx=0
-    if dx<0:
-        dx=0
-    if sy<0:
-        sy=0
-    if dy<0:
-        dy=0
-    if sx>img1.shape[0]-1:
-        sx=img1.shape[0]-1
-    if dx>img2.shape[0]-1:
-        dx=img2.shape[0]-1
-    if sy>img1.shape[1]-1:
-        sy=img1.shape[1]-1
-    if dy>img2.shape[1]-1:
-        dy=img2.shape[1]-1
-    return sx,sy,dx,dy
-
-###############################################################################################################
-# warp_image_affine_transform_with_linear_dissolve
-# To do affine Transformation from source image to destination image by making some intermediate images in which 
-# pixel value are calculated by combination of pixel value in source and destination image 
-# with linear dissolve blending
-# Arguments:
-# no_of_intermed -- how many number of intermediate images we want to make.
-# img1 -- Source image
-# img2 -- Target image
-################################################################################################################ 
-
-def warp_image_affine_transform_with_linear_dissolve(no_of_intermed, img1, img2, tri1, tri2):
-    n=no_of_intermed+2
-    
-    for k in range(1,no_of_intermed+1):
-        
-        print(str(k)+" intermediate is generating it may take some time Please Wait...")
-        inter=np.zeros_like(img1,dtype=np.uint8)
-        row,col,channel=inter.shape
-        print(f"row == {row}, col == {col}, channel == {channel}")
-
-        intTri=get_intermediate_triangles(tri1,tri2,k,n)
-        
-        print(f"@@@ intTri == {intTri}")
-
-        for ( s_tri , i_tri , d_tri ) in zip( tri1 , intTri , tri2 ):
-
-            src_e1x , src_e1y , src_e2x , src_e2y = get_affine_basis(s_tri)
-            int_e1x , int_e1y , int_e2x , int_e2y = get_affine_basis(i_tri)
-            dest_e1x , dest_e1y , dest_e2x , dest_e2y = get_affine_basis(d_tri)
-            
-            #print(f"debug 1")
-            for r in range(row):
-                for c in range(col):
-                    if isInsideTriangle(i_tri[0],i_tri[1],i_tri[2],r,c):
-                        # print("debug 3")
-                        X = r-i_tri[0][0]
-                        Y = c-i_tri[0][1]
-
-                        alpha=((int_e2y*X)-(Y*int_e2x))/((int_e1x*int_e2y)-(int_e2x*int_e1y))
-                        beta=((int_e1y*X)-(Y*int_e1x))/((int_e1y*int_e2x)-(int_e2y*int_e1x))
-
-                        dest_x=int(alpha*dest_e1x+beta*dest_e2x+d_tri[0][0])
-                        dest_y=int(alpha*dest_e1y+beta*dest_e2y+d_tri[0][1])
-
-                        src_x=int(alpha*src_e1x+beta*src_e2x+s_tri[0][0])
-                        src_y=int(alpha*src_e1y+beta*src_e2y+s_tri[0][1])
-
-                        src_x,src_y,dest_x,dest_y=checkRange(src_x,src_y,dest_x,dest_y, img1, img2)
-
-                        inter[r][c][0]=int(((n-k)/n)*img1[src_x][src_y][0]
-                                           +(k/n)*img2[dest_x][dest_y][0])
-                        inter[r][c][1]=int(((n-k)/n)*img1[src_x][src_y][1]
-                                           +(k/n)*img2[dest_x][dest_y][1])
-                        inter[r][c][2]=int(((n-k)/n)*img1[src_x][src_y][2]
-                                           +(k/n)*img2[dest_x][dest_y][2])
-
-#         cv2.imshow("inter"+str(k),inter)
-        print(f"debug 2")
-        name="generated-images/linear-dissolve/inter_"+str(k)+".jpg"
-        cv2.imwrite(name, inter) 
-       # cv2.waitKey(0)
-       # cv2.destroyAllWindows()
-       
-       
-###############################################################################################################
-# warp_image_affine_transform_with_laplacian_pyrimid_blending
-# To do affine Transformation from source image to destination image with laplacian pyrimid blending
-# Arguments:
-# no_of_intermed -- how many number of intermediate images we want to make.
-# img1 -- Source image
-# img2 -- Target image
-################################################################################################################ 
-
-def warp_image_affine_transform_with_laplacian_pyrimid_blending(no_of_intermed, img1, img2, tri1, tri2):
-    n=no_of_intermed+2
-    
-    for k in range(1,no_of_intermed+1):
-        
-        print(str(k)+" intermediate is generating it may take some time Please Wait...")
-        img1_warp = np.zeros_like(img1, dtype=np.float32)
-        img2_warp = np.zeros_like(img2, dtype=np.float32)
-        inter=np.zeros_like(img1,dtype=np.uint8)
-        row,col,channel=inter.shape
-        print(f"row == {row}, col == {col}, channel == {channel}")
-
-        intTri=get_intermediate_triangles(tri1,tri2,k,n)
-        
-        print(f"@@@ intTri == {intTri}")
-
-        for (s_tri , i_tri , d_tri) in zip(tri1 , intTri , tri2):
-
-            src_e1x , src_e1y , src_e2x , src_e2y = get_affine_basis(s_tri)
-            int_e1x , int_e1y , int_e2x , int_e2y = get_affine_basis(i_tri)
-            dest_e1x , dest_e1y , dest_e2x , dest_e2y = get_affine_basis(d_tri)
-            
-            #print(f"debug 1")
-            for r in range(row):
-                for c in range(col):
-                    if isInsideTriangle(i_tri[0],i_tri[1],i_tri[2],r,c):
-                        # print("debug 3")
-                        X = r-i_tri[0][0]
-                        Y = c-i_tri[0][1]
-
-                        alpha=((int_e2y*X)-(Y*int_e2x))/((int_e1x*int_e2y)-(int_e2x*int_e1y))
-                        beta=((int_e1y*X)-(Y*int_e1x))/((int_e1y*int_e2x)-(int_e2y*int_e1x))
-
-                        dest_x=int(alpha*dest_e1x+beta*dest_e2x+d_tri[0][0])
-                        dest_y=int(alpha*dest_e1y+beta*dest_e2y+d_tri[0][1])
-
-                        src_x=int(alpha*src_e1x+beta*src_e2x+s_tri[0][0])
-                        src_y=int(alpha*src_e1y+beta*src_e2y+s_tri[0][1])
-
-                        src_x,src_y,dest_x,dest_y=checkRange(src_x,src_y,dest_x,dest_y, img1, img2)
-
-                        img1_warp[r][c] = img1[src_x][src_y]
-                        img2_warp[r][c] = img2[dest_x][dest_y]
+def _warp_to_intermediate(img, src_triangles, intermediate_triangles):
+    warped = np.zeros_like(img, dtype=np.float32)
+    src_float = img.astype(np.float32)
+    for src_tri, inter_tri in zip(src_triangles, intermediate_triangles):
+        _apply_affine_triangle(src_float, warped, src_tri, inter_tri)
+    return warped
 
 
-#         cv2.imshow("inter"+str(k),inter)
-        alpha = k / n
-        inter = laplacian_pyrimid_blending(img1_warp, img2_warp, alpha)
-        inter = np.clip(inter, 0, 255).astype(np.uint8)
+def _write_frame(output_dir, frame_index, frame):
+    output_path = Path(output_dir)
+    output_path.mkdir(parents=True, exist_ok=True)
+    path = output_path / f"inter_{frame_index}.jpg"
+    cv2.imwrite(str(path), frame)
+    return path
 
-        print(f"debug 2")
-        name="generated-images/laplacian-pyrimid-blending/inter_"+str(k)+".jpg"
-        cv2.imwrite(name, inter) 
-       # cv2.waitKey(0)
-       # cv2.destroyAllWindows()       
+
+def _generate_frames(no_of_frames, img1, img2, tri1, tri2, output_dir, blend, include_endpoints=False):
+    frame_paths = []
+    if include_endpoints and no_of_frames < 2:
+        raise ValueError("At least two total frames are required when endpoints are included.")
+
+    for frame_index in range(1, no_of_frames + 1):
+        if include_endpoints:
+            alpha = (frame_index - 1) / (no_of_frames - 1)
+            k = frame_index - 1
+            n = no_of_frames - 1
+        else:
+            n = no_of_frames + 2
+            k = frame_index
+            alpha = k / n
+
+        print(f"{frame_index} frame is generating...")
+        if include_endpoints and frame_index == 1:
+            inter = img1.copy()
+        elif include_endpoints and frame_index == no_of_frames:
+            inter = img2.copy()
+        else:
+            int_tri = get_intermediate_triangles(tri1, tri2, k, n)
+            img1_warp = _warp_to_intermediate(img1, tri1, int_tri)
+            img2_warp = _warp_to_intermediate(img2, tri2, int_tri)
+            if blend == "linear":
+                inter = (1.0 - alpha) * img1_warp + alpha * img2_warp
+            else:
+                inter = laplacian_pyrimid_blending(img1_warp, img2_warp, alpha)
+            inter = np.clip(inter, 0, 255).astype(np.uint8)
+
+        frame_paths.append(_write_frame(output_dir, frame_index, inter))
+
+    return frame_paths
+
+
+def warp_image_affine_transform_with_linear_dissolve(
+    no_of_intermed,
+    img1,
+    img2,
+    tri1,
+    tri2,
+    output_dir="generated-images/linear-dissolve",
+    include_endpoints=False,
+):
+    return _generate_frames(no_of_intermed, img1, img2, tri1, tri2, output_dir, "linear", include_endpoints)
+
+
+def warp_image_affine_transform_with_laplacian_pyrimid_blending(
+    no_of_intermed,
+    img1,
+    img2,
+    tri1,
+    tri2,
+    output_dir="generated-images/laplacian-pyrimid-blending",
+    include_endpoints=False,
+):
+    return _generate_frames(no_of_intermed, img1, img2, tri1, tri2, output_dir, "laplacian", include_endpoints)

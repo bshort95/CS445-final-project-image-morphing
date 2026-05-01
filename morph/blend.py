@@ -5,6 +5,8 @@ def cross_dissolve(img1, img2, alpha):
     return (1 - alpha) * img1 + alpha * img2
 
 def laplacian_pyrimid_blending(img1, img2, alpha, levels=7):
+    max_levels = int(np.floor(np.log2(min(img1.shape[:2])))) - 1
+    levels = max(1, min(levels, max_levels))
     gaussian1 = build_gaussian_pyramid(img1, levels)
     gaussian2 = build_gaussian_pyramid(img2, levels)
 
@@ -14,7 +16,6 @@ def laplacian_pyrimid_blending(img1, img2, alpha, levels=7):
     L_blend = []
     for l1, l2 in zip(laplacian1, laplacian2):
         L_blend.append((1-alpha)*l1 + alpha*l2)
-        print(f"@@@@ ")
 
     return reconstruct(L_blend)
 

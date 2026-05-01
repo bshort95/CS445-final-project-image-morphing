@@ -1,7 +1,65 @@
-import numpy as np
-import math
-import sys
+import argparse
+from pathlib import Path
+
 import cv2
+import numpy as np
+
+from morph.correspondences import (
+    boundary_anchors,
+    get_automatic_face_points,
+    get_manual_points,
+    load_correspondences,
+    remove_duplicate_correspondences,
+    save_correspondences,
+)
+from morph.evaluation import evaluate_manual_vs_auto
+from morph.triangulation import triangulate_correspondences
+from morph.warp import (
+    warp_image_affine_transform_with_laplacian_pyrimid_blending,
+    warp_image_affine_transform_with_linear_dissolve,
+)
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Generate image morphs from manual or automatic correspondences.")
+    parser.add_argument("image1", help="Source image filename in input-images/ or an explicit path.")
+    parser.add_argument("image2", help="Destination image filename in input-images/ or an explicit path.")
+    parser.add_argument(
+        "--correspondence",
+        choices=["manual", "auto", "compare"],
+        default="manual",
+        help="Correspondence source. Default preserves the original manual-click workflow.",
+    )
+    parser.add_argument("--frames", type=int, help="Number of intermediate frames to generate.")
+    parser.add_argument(
+        "--total-frames",
+        type=int,
+        help="Total output frames including endpoints, so inter_1 is source and inter_N is destination.",
+    )
+    parser.add_argument("--blend", choices=["linear", "laplacian"], default="laplacian")
+    parser.add_argument("--no-display", action="store_true", help="Do not open OpenCV UI windows.")
+    parser.add_argument(
+        "--save-correspondences",
+        nargs="?",
+        const="generated-images/correspondences.json",
+        help="Save the selected correspondences to JSON.",
+    )
+    parser.add_argument("--manual-correspondences", help="JSON file with saved manual correspondences.")
+    parser.add_argument("--auto-correspondences", help="JSON file with saved automatic correspondences.")
+    parser.add_argument("--output-dir", help="Override the generated frame output folder.")
+    parser.add_argument(
+        "--evaluation-only",
+        action="store_true",
+        help="In compare mode, reuse existing manual/auto frame folders instead of regenerating frames.",
+    )
+    parser.add_argument("--manual-frames-dir", help="Existing manual frame folder for --evaluation-only.")
+    parser.add_argument("--auto-frames-dir", help="Existing automatic frame folder for --evaluation-only.")
+    parser.add_argument(
+        "--evaluation-dir",
+        default="evaluation-results/manual-vs-auto",
+        help="Output directory for compare-mode metrics and figures.",
+    )
+    return parser.parse_args()
 
 from morph.warp import warp_image_affine_transform_with_linear_dissolve
 from morph.warp import warp_image_affine_transform_with_laplacian_pyrimid_blending
@@ -144,28 +202,24 @@ def showTriangulated(img1,img2):
 # img2=cv2.imread("clinton.jpg")
 #################################################################
 
-if __name__ == "__main__":
-    img1=cv2.imread("./input-images/"+ str(sys.argv[1]))
-    img2=cv2.imread("./input-images/"+ str(sys.argv[2]))
-    img2 = cv2.resize(img2,(img1.shape[1],img1.shape[0]))
-    im1=np.copy(img1)
-    im2=np.copy(img2)
-    window1 = 'image1'
-    window2= 'image2'
-    coordSrc=[]
-    coordDest=[]
 
-    # # Getting control points on images using mouse click
-    cv2.namedWindow(window1)
-    cv2.setMouseCallback(window1, CallBackFuncForimg1)
-    getcoord(window1,im1)
+def get_output_dir(blend, correspondence, override=None):
+    if override:
+        return override
+    prefix = "auto" if correspondence == "auto" else "manual"
+    if blend == "linear":
+        return f"generated-images/{prefix}-linear-dissolve"
+    return f"generated-images/{prefix}-laplacian-pyrimid-blending"
 
-    cv2.namedWindow(window2)
-    cv2.setMouseCallback(window2, CallBackFuncForimg2)
-    getcoord(window2,im2)
 
-    r1,c1,ch1= img1.shape
-    r2,c2,ch2 = img2.shape
+def get_compare_output_dirs(blend, manual_override=None, auto_override=None):
+    if blend == "linear":
+        manual_output = "generated-images/manual-linear-dissolve"
+        auto_output = "generated-images/auto-linear-dissolve"
+    else:
+        manual_output = "generated-images/manual-laplacian-pyrimid-blending"
+        auto_output = "generated-images/auto-laplacian-pyrimid-blending"
+    return manual_override or manual_output, auto_override or auto_output
 
     if len(coordSrc) != len(coordDest):
         raise ValueError("Source and destination images must have the same number of control points.")
@@ -198,5 +252,158 @@ if __name__ == "__main__":
     else:
         raise ValueError("Unknown morphing method selected.")
 
+def existing_frame_paths(frame_dir, frame_count):
+    paths = [Path(frame_dir) / f"inter_{idx}.jpg" for idx in range(1, frame_count + 1)]
+    missing = [str(path) for path in paths if not path.exists()]
+    if missing:
+        preview = ", ".join(missing[:3])
+        raise FileNotFoundError(f"Missing generated frame(s): {preview}")
+    return paths
 
 
+def run_warp(frames, img1, img2, triangles1, triangles2, blend, output_dir, include_endpoints=False):
+    if blend == "linear":
+        return warp_image_affine_transform_with_linear_dissolve(
+            frames, img1, img2, triangles1, triangles2, output_dir=output_dir, include_endpoints=include_endpoints
+        )
+    return warp_image_affine_transform_with_laplacian_pyrimid_blending(
+        frames, img1, img2, triangles1, triangles2, output_dir=output_dir, include_endpoints=include_endpoints
+    )
+
+
+def resolve_frame_request(args):
+    if args.frames is not None and args.total_frames is not None:
+        raise ValueError("Use either --frames for intermediate-only output or --total-frames for endpoint-inclusive output.")
+    if args.total_frames is not None:
+        if args.total_frames < 2:
+            raise ValueError("--total-frames must be at least 2.")
+        return args.total_frames, True
+    if args.frames is not None:
+        if args.frames < 1:
+            raise ValueError("--frames must be at least 1.")
+        return args.frames, False
+    return int(input("Enter number of intermediate you want ")), False
+
+
+def get_auto_correspondences(args, img1, img2):
+    if args.auto_correspondences:
+        return load_correspondences(args.auto_correspondences)
+    return get_automatic_face_points(img1, img2)
+
+
+def get_manual_correspondences(args, img1, img2):
+    if args.manual_correspondences:
+        return load_correspondences(args.manual_correspondences)
+    return collect_manual_correspondences(img1, img2, no_display=args.no_display)
+
+
+def run_single_mode(args, img1, img2):
+    frames, include_endpoints = resolve_frame_request(args)
+    if args.correspondence == "auto":
+        points1, points2 = get_auto_correspondences(args, img1, img2)
+        prefer_scipy = True
+    else:
+        points1, points2 = get_manual_correspondences(args, img1, img2)
+        prefer_scipy = len(points1) > 25
+
+    if args.save_correspondences:
+        save_correspondences(
+            args.save_correspondences,
+            points1,
+            points2,
+            metadata={
+                "mode": args.correspondence,
+                "blend": args.blend,
+                "frames": frames,
+                "include_endpoints": include_endpoints,
+            },
+        )
+
+    triangles1, triangles2 = triangulate(points1, points2, prefer_scipy=prefer_scipy)
+    tri1, tri2 = show_triangulated(img1, img2, triangles1, triangles2, no_display=args.no_display)
+    output_dir = get_output_dir(args.blend, args.correspondence, args.output_dir)
+    frame_paths = run_warp(frames, img1, img2, tri1, tri2, args.blend, output_dir, include_endpoints)
+    print(f"Generated {len(frame_paths)} frames in {output_dir}")
+
+
+def run_compare_mode(args, img1, img2):
+    frames, include_endpoints = resolve_frame_request(args)
+    manual_points1, manual_points2 = get_manual_correspondences(args, img1, img2)
+    auto_points1, auto_points2 = get_auto_correspondences(args, img1, img2)
+
+    if args.save_correspondences:
+        save_correspondences(
+            Path(args.save_correspondences).with_name("manual_correspondences.json"),
+            manual_points1,
+            manual_points2,
+            metadata={"mode": "manual", "blend": args.blend, "frames": frames, "include_endpoints": include_endpoints},
+        )
+        save_correspondences(
+            Path(args.save_correspondences).with_name("auto_correspondences.json"),
+            auto_points1,
+            auto_points2,
+            metadata={"mode": "auto", "blend": args.blend, "frames": frames, "include_endpoints": include_endpoints},
+        )
+
+    manual_triangles = triangulate(manual_points1, manual_points2, prefer_scipy=len(manual_points1) > 25)
+    auto_triangles = triangulate(auto_points1, auto_points2, prefer_scipy=True)
+
+    manual_output, auto_output = get_compare_output_dirs(args.blend, args.manual_frames_dir, args.auto_frames_dir)
+
+    if args.evaluation_only:
+        manual_frames = existing_frame_paths(manual_output, frames)
+        auto_frames = existing_frame_paths(auto_output, frames)
+    else:
+        manual_frames = run_warp(
+            frames,
+            img1,
+            img2,
+            manual_triangles[0],
+            manual_triangles[1],
+            args.blend,
+            manual_output,
+            include_endpoints,
+        )
+        auto_frames = run_warp(
+            frames,
+            img1,
+            img2,
+            auto_triangles[0],
+            auto_triangles[1],
+            args.blend,
+            auto_output,
+            include_endpoints,
+        )
+
+    metrics_path = evaluate_manual_vs_auto(
+        img1,
+        img2,
+        manual_points1,
+        manual_points2,
+        auto_points1,
+        auto_points2,
+        manual_triangles,
+        auto_triangles,
+        manual_frames,
+        auto_frames,
+        output_dir=args.evaluation_dir,
+        include_endpoints=include_endpoints,
+        blend_name=args.blend,
+    )
+    print(f"Evaluation metrics saved to {metrics_path}")
+
+
+def main():
+    args = parse_args()
+    img1, _ = load_image(args.image1)
+    img2, _ = load_image(args.image2)
+    img2 = cv2.resize(img2, (img1.shape[1], img1.shape[0]))
+
+    if args.correspondence == "compare":
+        run_compare_mode(args, img1, img2)
+    else:
+        run_single_mode(args, img1, img2)
+
+
+if __name__ == "__main__":
+    main()
