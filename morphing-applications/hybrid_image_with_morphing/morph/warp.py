@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 from utils.image_utils import area
-from morph.blend import laplacian_pyrimid_blending
+from morph.blend import laplacian_pyramid_blending
 
 #######################################################################################################################################################
 # ### isInsideTriangle(p1,p2,p3,x,y)
@@ -122,15 +122,15 @@ def checkRange(sx , sy , dx , dy, img1, img2):
        
        
 ###############################################################################################################
-# warp_image_affine_transform_with_laplacian_pyrimid_blending
-# To do affine Transformation from source image to destination image with laplacian pyrimid blending
+# warp_image_affine_transform_with_laplacian_pyramid_blending
+# To do affine Transformation from source image to destination image with laplacian pyramid blending
 # Arguments:
 # no_of_intermed -- how many number of intermediate images we want to make.
 # img1 -- Source image
 # img2 -- Target image
 ################################################################################################################ 
 
-def warp_image_affine_transform_with_laplacian_pyrimid_blending(no_of_intermed, img1, img2, tri1, tri2):
+def warp_image_affine_transform_with_laplacian_pyramid_blending(no_of_intermed, img1, img2, tri1, tri2):
     # n=no_of_intermed+2
     n=no_of_intermed
     
@@ -178,14 +178,14 @@ def warp_image_affine_transform_with_laplacian_pyrimid_blending(no_of_intermed, 
                         img2_warp[r][c] = img2[dest_x][dest_y]
 
         alpha = k / n
-        inter, synthsize_item = laplacian_pyrimid_blending(img1_warp, img2_warp, alpha, k)
+        inter, synthsize_item = laplacian_pyramid_blending(img1_warp, img2_warp, alpha, k)
 
         selected_synthesize_items.append(synthsize_item)
 
         inter = np.clip(inter, 0, 255).astype(np.uint8)
 
         # print(f"debug 2")
-        name="generated-images/laplacian-pyrimid-blending/inter_"+str(k)+".jpg"
+        name="generated-images/laplacian-pyramid-blending/inter_"+str(k)+".jpg"
         cv2.imwrite(name, inter) 
 
     return selected_synthesize_items    

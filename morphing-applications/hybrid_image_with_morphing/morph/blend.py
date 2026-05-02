@@ -1,13 +1,12 @@
 import cv2
-import numpy as np
 
 
 #####################################################################################
-# function: laplacian_pyrimid_blending
+# function: laplacian_pyramid_blending
 # Reading of input images and resizing them to same size
 #
 #####################################################################################
-def laplacian_pyrimid_blending(img1, img2, alpha, k,levels=5):
+def laplacian_pyramid_blending(img1, img2, alpha, k,levels=5):
     gaussian1 = build_gaussian_pyramid(img1, levels)
     gaussian2 = build_gaussian_pyramid(img2, levels)
 
@@ -27,11 +26,11 @@ def laplacian_pyrimid_blending(img1, img2, alpha, k,levels=5):
         temp = (1-alpha)*l1 + alpha*l2   
 
         if (k == 1 and level == 1) or (k == 2 and level == 2) or (k == 3 and level == 3) or (k == 4 and level == 4):
-            name="generated-images/laplacian-pyrimid-blending/hipass/inter_hipass_"+str(k)+"_level_"+str(level)+".jpg"
+            name="generated-images/laplacian-pyramid-blending/hipass/inter_hipass_"+str(k)+"_level_"+str(level)+".jpg"
             cv2.imwrite(name, temp) 
             selected_hybrid_items.append(temp)
         elif k == levels and level == levels+1:     
-            name="generated-images/laplacian-pyrimid-blending/hipass/inter_lowpass_"+str(k)+"_level_"+str(level)+".jpg"
+            name="generated-images/laplacian-pyramid-blending/hipass/inter_lowpass_"+str(k)+"_level_"+str(level)+".jpg"
             cv2.imwrite(name, temp) 
             # print(f"#####")
             selected_hybrid_items.append(temp)
@@ -45,7 +44,7 @@ def laplacian_pyrimid_blending(img1, img2, alpha, k,levels=5):
     #    temp = (1-alpha)*l1 + alpha*l2   
     # #    print(f"@ k == {k} level == {level}")
     #    if k == levels and level == levels:
-    #         name="generated-images/laplacian-pyrimid-blending/hipass/inter_lowpass_"+str(k)+"_level_"+str(level)+".jpg"
+    #         name="generated-images/laplacian-pyramid-blending/hipass/inter_lowpass_"+str(k)+"_level_"+str(level)+".jpg"
     #         cv2.imwrite(name, temp) 
     #         # print(f"#####")
     #         selected_hybrid_items.append(temp)
@@ -55,10 +54,10 @@ def laplacian_pyrimid_blending(img1, img2, alpha, k,levels=5):
 
 #################################################################
 # function: build_gaussian_pyramid
-# Build Gaussian pyrimid of a provided image
+# Build Gaussian pyramid of a provided image
 # input parameters:
-# img -- source image whose gaussian pyrimid needs to be built
-# levels -- total level of the pyrimid
+# img -- source image whose gaussian pyramid needs to be built
+# levels -- total level of the pyramid
 #################################################################
 def build_gaussian_pyramid(img, level=5):
     G = [img]
@@ -69,29 +68,29 @@ def build_gaussian_pyramid(img, level=5):
 
 #################################################################
 # Function: build_laplacian_pyramid
-# Build Laplacian pyrimid based on gaussian pyrimid
-# Input parameter: gaussian_pyrimid
+# Build Laplacian pyramid based on gaussian pyramid
+# Input parameter: gaussian_pyramid
 #################################################################
-def build_laplacian_pyramid(gaussian_pyrimid):
+def build_laplacian_pyramid(gaussian_pyramid):
     laplacian_pyramid = []
-    for i in range(len(gaussian_pyrimid)-1):
-        size = (gaussian_pyrimid[i].shape[1], gaussian_pyrimid[i].shape[0])
-        GE = cv2.pyrUp(gaussian_pyrimid[i+1], dstsize=size)
-        laplacian_pyramid.append(gaussian_pyrimid[i] - GE)
-    laplacian_pyramid.append(gaussian_pyrimid[-1])
+    for i in range(len(gaussian_pyramid)-1):
+        size = (gaussian_pyramid[i].shape[1], gaussian_pyramid[i].shape[0])
+        GE = cv2.pyrUp(gaussian_pyramid[i+1], dstsize=size)
+        laplacian_pyramid.append(gaussian_pyramid[i] - GE)
+    laplacian_pyramid.append(gaussian_pyramid[-1])
     return laplacian_pyramid
 
 
 #################################################################
 # Function: reconstruct
 # Reconstruct the blended image
-# Input parameter: gaussian_pyrimid
+# Input parameter: gaussian_pyramid
 #################################################################
-def reconstruct(laplacian_pyrimid):
-    img = laplacian_pyrimid[-1] 
-    for i in range(len(laplacian_pyrimid)-2, -1, -1):
-        size = (laplacian_pyrimid[i].shape[1], laplacian_pyrimid[i].shape[0])
-        img = cv2.pyrUp(img, dstsize=size) + laplacian_pyrimid[i]
+def reconstruct(laplacian_pyramid):
+    img = laplacian_pyramid[-1] 
+    for i in range(len(laplacian_pyramid)-2, -1, -1):
+        size = (laplacian_pyramid[i].shape[1], laplacian_pyramid[i].shape[0])
+        img = cv2.pyrUp(img, dstsize=size) + laplacian_pyramid[i]
     return img   
     
 ###########################################################################################

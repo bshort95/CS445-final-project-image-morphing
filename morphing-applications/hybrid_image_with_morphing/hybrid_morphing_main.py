@@ -3,7 +3,7 @@ import math
 import sys
 import cv2
 
-from morph.warp import warp_image_affine_transform_with_laplacian_pyrimid_blending
+from morph.warp import warp_image_affine_transform_with_laplacian_pyramid_blending
 from morph.blend import reconstruct_hybrid_morphing_img_V3
 from morph.triangulation import compute_delaunay
 
@@ -142,9 +142,9 @@ if __name__ == "__main__":
     print(f"@@ tri1 == {tri1}")
     print(f"@@ tri2 == {tri2}")
     # warp_image_affine_transform_with_linear_dissolve(int(input("Enter number of intermediate you want ")), img1, img2, tri1, tri2)
-    selected_synthesize_items = warp_image_affine_transform_with_laplacian_pyrimid_blending(int(input("Enter number of intermediate you want ")), img1, img2, tri1, tri2)
+    selected_synthesize_items = warp_image_affine_transform_with_laplacian_pyramid_blending(int(input("Enter number of intermediate you want ")), img1, img2, tri1, tri2)
 
     print(f"@@@ selected_synthesize_items. len == {len(selected_synthesize_items)}")
     synthsize_hybrid_morphing_img = reconstruct_hybrid_morphing_img_V3(selected_synthesize_items)
-    hybrid_morphing_name="generated-images/laplacian-pyrimid-blending/output/hybrid_morph_blending_result.jpg"
+    hybrid_morphing_name="generated-images/laplacian-pyramid-blending/output/hybrid_morph_blending_result.jpg"
     cv2.imwrite(hybrid_morphing_name, synthsize_hybrid_morphing_img)
