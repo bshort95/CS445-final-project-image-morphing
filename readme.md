@@ -62,23 +62,19 @@ $ffmpeg -version
 $ffmpeg -framerate 15 -i generated-images/linear-dissolve/inter_%d.jpg generated-images/linear-dissolve/output.gif
 $ffmpeg -framerate 15 -i generated-images/linear-dissolve/inter_%d.jpg generated-images/linear-dissolve/output.mp4
 
-$ffmpeg -framerate 15 -i generated-images/laplacian-pyrimid-blending/inter_%d.jpg generated-images/laplacian-pyrimid-blending/output.gif
-$ffmpeg -framerate 15 -i generated-images/laplacian-pyrimid-blending/inter_%d.jpg generated-images/laplacian-pyrimid-blending/output.mp4
+$ffmpeg -framerate 15 -i generated-images/laplacian-pyramid-blending/inter_%d.jpg generated-images/laplacian-pyramid-blending/output.gif
+$ffmpeg -framerate 15 -i generated-images/laplacian-pyramid-blending/inter_%d.jpg generated-images/laplacian-pyramid-blending/output.mp4
 
 $ffmpeg -framerate 15 -i generated-images/tps-linear-dissolve/inter_%d.jpg generated-images/tps-linear-dissolve/output.gif
 $ffmpeg -framerate 15 -i generated-images/tps-linear-dissolve/inter_%d.jpg generated-images/tps-linear-dissolve/output.mp4
 
-$ffmpeg -framerate 15 -i generated-images/tps-laplacian-pyrimid-blending/inter_%d.jpg generated-images/tps-laplacian-pyrimid-blending/output.gif
-$ffmpeg -framerate 15 -i generated-images/tps-laplacian-pyrimid-blending/inter_%d.jpg generated-images/tps-laplacian-pyrimid-blending/output.mp4
+$ffmpeg -framerate 15 -i generated-images/tps-laplacian-pyramid-blending/inter_%d.jpg generated-images/tps-laplacian-pyramid-blending/output.gif
+$ffmpeg -framerate 15 -i generated-images/tps-laplacian-pyramid-blending/inter_%d.jpg generated-images/tps-laplacian-pyramid-blending/output.mp4
 ```
-
-<strong>If you find any difficulty in the steps above you can refer to the video attached of the same.</strong>
-
-<b>Note - The code is explained in the report itself.</b>
 
 
 ---
-<strong>Note: Please follow below project structure to add more files </strong>
+<strong>Note: Please follow the project structure to add more files </strong>
 ## Project Structure
 
 ```text
@@ -98,7 +94,7 @@ CS445-final-project-image-morphing/
 │        └── Triangulated Image_dest.jpg
 │
 ├── generated-images                # Directory saving all generated intermediate morphing images and generated MP4 and GIF files
-│        ├── laplacian-pyrimid-blending
+│        ├── laplacian-pyramid-blending
 │        │        ├── inter_1.jpg
 │        │        ├── inter_2.jpg
 │        │        ├── ..........
