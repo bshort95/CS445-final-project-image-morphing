@@ -47,6 +47,7 @@ Use the `tps-*` options for Thin Plate Spline based advanced warping.
 
 The code will take some time to create and save the desired number of intermediates. We have directly saved the images to save the time.
 
+<<<<<<< HEAD
 ## Multi Image Morphing
 
 <Strong> sequential image morphing<Strong>  
@@ -63,6 +64,8 @@ the program defaults to the sequential image morphing and will ask you how many 
 
 ```
 
+=======
+>>>>>>> e069bfb4052234059e49ad9b4c6ee16060d71f9c
 <strong>Step-4</strong> Open the command line or terminal and enter the following to generate mp4 video or gif with all the intermediate images generated in step-3:
 
 
@@ -101,12 +104,17 @@ $ffmpeg -framerate 15 -i generated-images/tps-laplacian-pyrimid-blending/inter_%
 CS445-final-project-image-morphing/
 
 │── morphing-applications           # Directory for all morphing useful applications
+<<<<<<< HEAD
 │        ├── hybrid_image_with_morphing
 │        ├── multi_img_processing   # average and sequential multi image processing
 │        |        ├── multi-input-generated-imgs
 |        |        ├── multi-input-triangulated-imgs
 |        |        ├── trig-files
 |        |        └── utils.py
+=======
+│        ├── application1
+│        ├── application2
+>>>>>>> e069bfb4052234059e49ad9b4c6ee16060d71f9c
 │        ├── application3
 │        └── application4
 │
