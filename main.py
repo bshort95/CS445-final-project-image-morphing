@@ -15,7 +15,7 @@ from morph.correspondences import (
 from morph.evaluation import evaluate_manual_vs_auto
 from morph.triangulation import triangulate_correspondences
 from morph.warp import (
-    warp_image_affine_transform_with_laplacian_pyrimid_blending,
+    warp_image_affine_transform_with_laplacian_pyramid_blending,
     warp_image_affine_transform_with_linear_dissolve,
 )
 
@@ -62,9 +62,9 @@ def parse_args():
     return parser.parse_args()
 
 from morph.warp import warp_image_affine_transform_with_linear_dissolve
-from morph.warp import warp_image_affine_transform_with_laplacian_pyrimid_blending
+from morph.warp import warp_image_affine_transform_with_laplacian_pyramid_blending
 from morph.tps import warp_image_tps_with_linear_dissolve
-from morph.tps import warp_image_tps_with_laplacian_pyrimid_blending
+from morph.tps import warp_image_tps_with_laplacian_pyramid_blending
 from morph.triangulation import compute_delaunay
 
 #######################################################################################################################################
@@ -209,7 +209,7 @@ def get_output_dir(blend, correspondence, override=None):
     prefix = "auto" if correspondence == "auto" else "manual"
     if blend == "linear":
         return f"generated-images/{prefix}-linear-dissolve"
-    return f"generated-images/{prefix}-laplacian-pyrimid-blending"
+    return f"generated-images/{prefix}-laplacian-pyramid-blending"
 
 
 def get_compare_output_dirs(blend, manual_override=None, auto_override=None):
@@ -217,8 +217,8 @@ def get_compare_output_dirs(blend, manual_override=None, auto_override=None):
         manual_output = "generated-images/manual-linear-dissolve"
         auto_output = "generated-images/auto-linear-dissolve"
     else:
-        manual_output = "generated-images/manual-laplacian-pyrimid-blending"
-        auto_output = "generated-images/auto-laplacian-pyrimid-blending"
+        manual_output = "generated-images/manual-laplacian-pyramid-blending"
+        auto_output = "generated-images/auto-laplacian-pyramid-blending"
     return manual_override or manual_output, auto_override or auto_output
 
     if len(coordSrc) != len(coordDest):
@@ -244,11 +244,11 @@ def get_compare_output_dirs(blend, manual_override=None, auto_override=None):
         if method == "affine-linear":
             warp_image_affine_transform_with_linear_dissolve(no_of_intermed, img1, img2, tri1, tri2)
         else:
-            warp_image_affine_transform_with_laplacian_pyrimid_blending(no_of_intermed, img1, img2, tri1, tri2)
+            warp_image_affine_transform_with_laplacian_pyramid_blending(no_of_intermed, img1, img2, tri1, tri2)
     elif method == "tps-linear":
         warp_image_tps_with_linear_dissolve(no_of_intermed, img1, img2, coordSrc, coordDest)
     elif method == "tps-laplacian":
-        warp_image_tps_with_laplacian_pyrimid_blending(no_of_intermed, img1, img2, coordSrc, coordDest)
+        warp_image_tps_with_laplacian_pyramid_blending(no_of_intermed, img1, img2, coordSrc, coordDest)
     else:
         raise ValueError("Unknown morphing method selected.")
 
@@ -266,7 +266,7 @@ def run_warp(frames, img1, img2, triangles1, triangles2, blend, output_dir, incl
         return warp_image_affine_transform_with_linear_dissolve(
             frames, img1, img2, triangles1, triangles2, output_dir=output_dir, include_endpoints=include_endpoints
         )
-    return warp_image_affine_transform_with_laplacian_pyrimid_blending(
+    return warp_image_affine_transform_with_laplacian_pyramid_blending(
         frames, img1, img2, triangles1, triangles2, output_dir=output_dir, include_endpoints=include_endpoints
     )
 

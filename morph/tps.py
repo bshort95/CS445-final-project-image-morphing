@@ -3,7 +3,7 @@ import os
 import cv2
 import numpy as np
 
-from morph.blend import laplacian_pyrimid_blending
+from morph.blend import laplacian_pyramid_blending
 
 
 def _as_float_points(points):
@@ -132,9 +132,9 @@ def warp_image_tps_with_linear_dissolve(no_of_intermed, img1, img2, points1, poi
         cv2.imwrite(name, inter)
 
 
-def warp_image_tps_with_laplacian_pyrimid_blending(no_of_intermed, img1, img2, points1, points2):
+def warp_image_tps_with_laplacian_pyramid_blending(no_of_intermed, img1, img2, points1, points2):
     n = no_of_intermed + 2
-    os.makedirs("generated-images/tps-laplacian-pyrimid-blending", exist_ok=True)
+    os.makedirs("generated-images/tps-laplacian-pyramid-blending", exist_ok=True)
 
     for k in range(1, no_of_intermed + 1):
         print(str(k) + " TPS intermediate is generating. Please wait...")
@@ -142,8 +142,8 @@ def warp_image_tps_with_laplacian_pyrimid_blending(no_of_intermed, img1, img2, p
         img1_warp = warp_image_with_tps(img1, points1, intermediate_points)
         img2_warp = warp_image_with_tps(img2, points2, intermediate_points)
         alpha = k / n
-        inter = laplacian_pyrimid_blending(img1_warp, img2_warp, alpha)
+        inter = laplacian_pyramid_blending(img1_warp, img2_warp, alpha)
         inter = np.clip(inter, 0, 255).astype(np.uint8)
 
-        name = "generated-images/tps-laplacian-pyrimid-blending/inter_" + str(k) + ".jpg"
+        name = "generated-images/tps-laplacian-pyramid-blending/inter_" + str(k) + ".jpg"
         cv2.imwrite(name, inter)
