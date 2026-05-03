@@ -56,7 +56,7 @@ def write_trig_files (imgs):
     write_count = 0
     print(trig_list)
     for t in trig_list:
-        fout = open('./morphing_applications/multi_img_processing/trig-files/trig{0}'.format(write_count), "w")
+        fout = open('./morphing-applications/multi_img_processing/trig-files/trig{0}'.format(write_count), "w")
         for i in t:
             fout.write(str(i))
             fout.write('\n')

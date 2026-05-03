@@ -3,7 +3,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 from utils.image_utils import area
-from morph.blend import laplacian_pyrimid_blending
+from morph.blend import laplacian_pyramid_blending
 
 def get_affine_basis(coord):
     e1x = coord[1][0]-coord[0][0]
