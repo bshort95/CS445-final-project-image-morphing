@@ -4,6 +4,15 @@ from pathlib import Path
 import cv2
 import numpy as np
 
+from morphing_applications.multi_img_processing.utils import (
+    create_avg_img, 
+    get_multi_input_images,
+    write_trig_files, 
+    read_trig_files,
+    show_triangulated_for_muliple_imgs,
+    warp_image_affine_transform_multiple_imgs, 
+    get_intermediate_triangle
+)
 from morph.correspondences import (
     boundary_anchors,
     get_automatic_face_points,
@@ -59,6 +68,9 @@ def parse_args():
         default="evaluation-results/manual-vs-auto",
         help="Output directory for compare-mode metrics and figures.",
     )
+    parser.add_argument("--multi-image", help="directory where multiple imges are kept")
+    parser.add_argument("--multi-image-proccess", help = "'seq' means you want to merge the images into a sequence of morphes, while 'avg' means you want to average the photos")
+    parser.add_argument("--multi-image-trigs", help="enter saved if you want to used saved coordinate from last manual point selection")
     return parser.parse_args()
 
 from morph.warp import warp_image_affine_transform_with_linear_dissolve
@@ -395,14 +407,30 @@ def run_compare_mode(args, img1, img2):
 
 def main():
     args = parse_args()
-    img1, _ = load_image(args.image1)
-    img2, _ = load_image(args.image2)
-    img2 = cv2.resize(img2, (img1.shape[1], img1.shape[0]))
-
-    if args.correspondence == "compare":
-        run_compare_mode(args, img1, img2)
+    if args.multi_image != "":
+        imgs = get_multi_input_images(args.multi_image)
+        
+        if args.multi_image_trigs != "saved":
+            write_trig_files(imgs)
+        
+        trigs = read_trig_files()
+        tris = show_triangulated_for_muliple_imgs(imgs,trigs)
+        
+        if args.multi_image_proccess == "avg":
+            create_avg_img(imgs,tris) 
+        else:
+            warp_image_affine_transform_multiple_imgs(int(input("how many frames between images would you like?")),imgs,tris)    
     else:
-        run_single_mode(args, img1, img2)
+        img1=cv2.imread("./input-images/"+ str(args.image1))
+        img2=cv2.imread("./input-images/"+ str(args.image2))
+        # img1, _ = load_image(args.image1)
+        # img2, _ = load_image(args.image2)
+        img2 = cv2.resize(img2, (img1.shape[1], img1.shape[0]))
+
+        if args.correspondence == "compare":
+            run_compare_mode(args, img1, img2)
+        else:
+            run_single_mode(args, img1, img2)
 
 
 if __name__ == "__main__":

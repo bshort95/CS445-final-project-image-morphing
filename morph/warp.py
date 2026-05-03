@@ -2,9 +2,45 @@ from pathlib import Path
 
 import cv2
 import numpy as np
+from utils.image_utils import area
+from morph.blend import laplacian_pyrimid_blending
 
-from morph.blend import laplacian_pyramid_blending
+def get_affine_basis(coord):
+    e1x = coord[1][0]-coord[0][0]
+    e1y = coord[1][1]-coord[0][1]
+    e2x = coord[2][0]-coord[0][0]
+    e2y = coord[2][1]-coord[0][1]
+    return e1x,e1y,e2x,e2y
 
+def isInsideTriangle(p1,p2,p3,x,y):
+ 
+    A = area (p1[0], p1[1], p2[0], p2[1], p3[0], p3[1])
+    A1 = area (x, y, p2[0], p2[1], p3[0], p3[1])  
+    A2 = area (p1[0], p1[1], x, y, p3[0], p3[1])  
+    A3 = area (p1[0], p1[1], p2[0], p2[1], x, y)
+    if(A == A1 + A2 + A3):
+        return True
+    else:
+        return False
+    
+def checkRange(sx , sy , dx , dy, img1, img2):
+    if sx<0:
+        sx=0
+    if dx<0:
+        dx=0
+    if sy<0:
+        sy=0
+    if dy<0:
+        dy=0
+    if sx>img1.shape[0]-1:
+        sx=img1.shape[0]-1
+    if dx>img2.shape[0]-1:
+        dx=img2.shape[0]-1
+    if sy>img1.shape[1]-1:
+        sy=img1.shape[1]-1
+    if dy>img2.shape[1]-1:
+        dy=img2.shape[1]-1
+    return sx,sy,dx,dy
 
 def _row_col_to_xy(triangle):
     tri = np.asarray(triangle, dtype=np.float32)
