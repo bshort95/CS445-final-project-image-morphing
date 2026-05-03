@@ -100,17 +100,12 @@ $ffmpeg -framerate 15 -i generated-images/tps-laplacian-pyramid-blending/inter_%
 CS445-final-project-image-morphing/
 
 │── morphing-applications           # Directory for all morphing useful applications
-<<<<<<< HEAD
 │        ├── hybrid_image_with_morphing
 │        ├── multi_img_processing   # average and sequential multi image processing
 │        |        ├── multi-input-generated-imgs
 |        |        ├── multi-input-triangulated-imgs
 |        |        ├── trig-files
 |        |        └── utils.py
-=======
-│        ├── application1
-│        ├── application2
->>>>>>> e069bfb4052234059e49ad9b4c6ee16060d71f9c
 │        ├── application3
 │        └── application4
 │
