@@ -16,6 +16,13 @@ uses the image morphing method to improve the limitations, based on morphing gen
 ##
 <br>
 
+---
+Output hybrid morphing image:
+-
+<img width="500" height="625" alt="hybrid_morph_blending_result" src="https://github.com/user-attachments/assets/506ad382-71d0-4f9e-8feb-e2bd2dd7d6c7" />
+
+<br>
+
 <br>
 
 ### Working directory:
@@ -81,12 +88,6 @@ $ python3 hybrid_morphing_main.py einstein.png monroe.png
 <br><br>
 
 ---
-Output hybrid morphing image:
--
-<img width="500" height="625" alt="hybrid_morph_blending_result" src="https://github.com/user-attachments/assets/506ad382-71d0-4f9e-8feb-e2bd2dd7d6c7" />
-
-<br>
-
 Design diagram:
 
 <img width="609" height="874" alt="image" src="https://github.com/user-attachments/assets/67feb3d6-6a2b-4afc-b3cc-cf80628982fe" />
@@ -94,12 +95,7 @@ Design diagram:
 <br>
 <img width="609" height="874" alt="image" src="https://github.com/user-attachments/assets/aac94794-8a1b-4bcf-aa14-651f3bcb953a" />
 
-
- 
 <br>
-
-
-
 
 <br><br>
 
