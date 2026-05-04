@@ -11,6 +11,7 @@ from morphing_applications.multi_img_processing.utils import (
     read_trig_files,
     show_triangulated_for_muliple_imgs,
     warp_image_affine_transform_multiple_imgs, 
+    warp_image_affine_transform_multiple_imgs_laplacian_pyramid_blending,
     get_intermediate_triangle
 )
 from morph.correspondences import (
@@ -422,7 +423,10 @@ def main():
         if args.multi_image_proccess == "avg":
             create_avg_img(imgs,tris) 
         else:
-            warp_image_affine_transform_multiple_imgs(int(input("how many frames between images would you like?")),imgs_original,tris)    
+            if args.blend == "linear":
+                warp_image_affine_transform_multiple_imgs(int(input("how many frames between images would you like?")),imgs_original,tris)    
+            else:
+                warp_image_affine_transform_multiple_imgs_laplacian_pyramid_blending(int(input("how many frames between images would you like?")),imgs_original,tris)
     else:
         img1=cv2.imread("./input-images/"+ str(args.image1))
         img2=cv2.imread("./input-images/"+ str(args.image2))
