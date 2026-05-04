@@ -67,8 +67,10 @@ to use this capability add '--multi-image {directory of images}' to the command 
 the program defaults to the sequential image morphing and will ask you how many frames you would like to generate between images, but you can add the flag '--multi-image-proccess avg' to apply image average morphing.
 
 ```
-
-
+```text
+$ python3 main.py img1.png img8.png --multi-image ./multi-input-images/ --blend linear --correspondence manual
+$ python3 main.py img1.png img8.png --multi-image ./multi-input-images/ --blend laplacian --correspondence manual
+```
 
 <strong>Step-4</strong> Open the command line or terminal and enter the following to generate mp4 video or gif with all the intermediate images generated in step-3:
 
@@ -93,6 +95,11 @@ $ffmpeg -framerate 15 -i generated-images/tps-linear-dissolve/inter_%d.jpg gener
 
 $ffmpeg -framerate 15 -i generated-images/tps-laplacian-pyramid-blending/inter_%d.jpg generated-images/tps-laplacian-pyramid-blending/output.gif
 $ffmpeg -framerate 15 -i generated-images/tps-laplacian-pyramid-blending/inter_%d.jpg generated-images/tps-laplacian-pyramid-blending/output.mp4
+
+$ffmpeg -framerate 15 -i ./generated-images/multi-input-laplacian-pyramid-blending/inter_%d.jpg ./generated-images/multi-input-laplacian-pyramid-blending/output.gif
+$ffmpeg -framerate 15 -i ./generated-images/multi-input-laplacian-pyramid-blending/inter_%d.jpg ./generated-images/multi-input-laplacian-pyramid-blending/output.mp4
+$ffmpeg -framerate 15 -i ./generated-images/multi-input-linear-dissolve/inter_%d.jpg ./generated-images/multi-input-linear-dissolve/output.gif
+$ffmpeg -framerate 15 -i ./generated-images/multi-input-linear-dissolve/inter_%d.jpg ./generated-images/multi-input-linear-dissolve/output.mp4
 ```
 
 
