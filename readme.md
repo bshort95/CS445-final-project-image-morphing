@@ -1,3 +1,14 @@
+<h1 align="center">Enhanced image morphing and useful applications</h1>
+
+<p align="center">
+  <strong>2026 Spring CS445 Course Project</strong><br>
+</p>
+
+---
+
+<br>
+
+## Project overview:
 
 <strong>Sample ouput:</strong>
 
@@ -17,11 +28,12 @@ depicting the transition between them. The method that is used in this project i
 Delaunay Triangulation and Affine transformation.</p>
 <p>Firstly the images are divided into several parts by selecting different points on it. These points
 on the image are called control points. The control points are used in order to apply the Delaunay
-triangulation as well as the Affine transformation on the images on them. The details of the
-methods are explained in the Algorithm section.</p>
+triangulation as well as the Affine transformation on the images on them. </p>
 <p>Morphing is mainly employed in the field of animations and special effects. In the present day
 there exist many software like after effects, nuke etc. These software can also be used by people
 who don’t know coding.</p>
+
+---
 # Instructions to use the code
 
 This file contains the steps on how to execute the file.
