@@ -32,6 +32,8 @@ who don’t know coding.</p>
 ## We focus on:
 <p> We focus on advanced techniques that can enhance the morphing effect. For example, advanced geometric transformation, advanced image intensity blending, automatic landmark selecting and triangulation, supporting multiple input images bulk morphing, etc.</p>
 ---
+<br>
+---
 ## Implementation:
 The basic image morphing ordinarily includes:
 1. Linear cross-dissolve blending
@@ -44,7 +46,7 @@ Enhanced image morphing includes:
 2. Advanced TPS (Thin Plate Splines) transformation
 3. Automatic feature point/landmark detection and triangulation
 4. Support multi-input images' bulk morphing 
-
+---
 <br>
 # Instructions to use the code
 
