@@ -34,7 +34,7 @@ who don’t know coding.</p>
 
 ## Implementation:
 
-|   **  Basic image morphing  **      |              **     Enhanced image morphing        **             |
+|   🔷 Basic image morphing       |          🔷 Enhanced image morphing                           |
 |---------------------------------|---------------------------------------------------------------|
 | Linear cross-dissolve blending  | Multi-band Gaussian-Laplacian pyramid blending                |
 | Affine transformation           | Advanced TPS (Thin Plate Splines) transformation              |
