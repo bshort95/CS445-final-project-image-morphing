@@ -67,16 +67,21 @@ def write_trig_files (imgs):
 def get_multi_input_images(dir):
     imgs = []
     resized_imgs = []
-    img_folder = dir 
+    img_folder = dir
 
-    for img in os.listdir(img_folder):
-        temp_img = cv2.imread(img_folder + img)
+    for img in sorted(os.listdir(img_folder)):
+        temp_img = cv2.imread(os.path.join(img_folder, img))
+        if temp_img is None:
+            continue
         imgs.append(temp_img)
+
+    if not imgs:
+        raise ValueError(f"No readable images found in {img_folder}.")
 
     base_h, base_w, base_c = imgs[0].shape
 
     for img in imgs:
-        resized_imgs.append(cv2.resize(img,(base_h,base_w)))
+        resized_imgs.append(cv2.resize(img,(base_w,base_h)))
 
     return resized_imgs
 
@@ -120,6 +125,7 @@ def show_triangulated_for_muliple_imgs(imgs,trigs):
         del_list.append(temp_del)
     for x in range(len(imgs)):
         cv2.imshow("img{0}".format(x),del_list[x])
+        os.makedirs("./morphing_applications/multi_img_processing/multi-input-triangulated-imgs", exist_ok=True)
         cv2.imwrite("./morphing_applications/multi_img_processing/multi-input-triangulated-imgs/img{0}.jpg".format(x),del_list[x])    
     
     cv2.waitKey(0)
@@ -202,6 +208,7 @@ def warp_image_affine_transform_multiple_imgs(no_of_intermed, imgs,tris):
     n=no_of_intermed
     base_img = imgs[0]
     frame_count = 0
+    os.makedirs("./generated-images/multi-input-linear-dissolve", exist_ok=True)
     
     for x in range(len(imgs)-1):
         img1 = imgs[x]
@@ -266,6 +273,7 @@ def warp_image_affine_transform_multiple_imgs_laplacian_pyramid_blending(no_of_i
     n=no_of_intermed
     base_img = imgs[0]
     frame_count = 0
+    os.makedirs("./generated-images/multi-input-laplacian-pyramid-blending", exist_ok=True)
     
     for x in range(len(imgs)-1):
         img1 = imgs[x]

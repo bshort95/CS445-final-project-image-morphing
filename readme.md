@@ -54,9 +54,25 @@ who don’t know coding.</p>
 
 This file contains the steps on how to execute the file.
 
+### Main command options
+
+`main.py` supports these options for the two-image morphing flow:
+
+| Option | Values | Description |
+|--------|--------|-------------|
+| `--correspondence` | `manual`, `auto`, `compare` | Choose manual point clicking, automatic face landmark correspondences, or manual-vs-auto evaluation. |
+| `--transform` | `affine`, `tps` | Choose affine triangle warping or Thin Plate Spline warping. |
+| `--blend` | `linear`, `laplacian` | Choose linear cross-dissolve or Gaussian-Laplacian pyramid blending. |
+| `--frames` | integer | Number of intermediate frames to generate, excluding the source and destination images. |
+| `--total-frames` | integer | Total number of output frames, including source and destination endpoints. |
+| `--no-display` | flag | Save outputs without opening OpenCV display windows. Useful for automatic runs. |
+| `--save-correspondences` | optional path | Save the selected correspondence points to JSON. |
+
+Note: TPS mode uses `--frames`. Do not use `--total-frames` with `--transform tps`.
+
 <strong>Step-1</strong> Open the command line or terminal and enter the following -
 ```text
-$python3 main.py img1.png img2.png
+$ python3 main.py img1.png img2.png
 ```
 here img1 refers to the source image and img2 refers to the destination image.
 
@@ -66,18 +82,56 @@ The program now automatically adds boundary anchor points around the image borde
 
 After doing so the system will display as well as save the triangulated images.
 
-<strong>Step-3</strong> Enter the number of intermediate images you want to see (This number should exclude the source and destination image as they are already taken care of).
+<strong>Step-3</strong> Enter the number of intermediate images you want to see, or pass it directly with `--frames`.
 
-Before entering that number, the program now asks you to choose a morphing method:
-```text
-affine-linear
-affine-laplacian
-tps-linear
-tps-laplacian
-```
-Use the `tps-*` options for Thin Plate Spline based advanced warping.
+The morphing method is selected from the command line. Use `--transform affine` or `--transform tps`, and use `--blend linear` or `--blend laplacian`.
 
 The code will take some time to create and save the desired number of intermediates. We have directly saved the images to save the time.
+
+### Automatic Correspondence Examples
+
+Automatic correspondence uses face landmarks, so it works best when each input image contains a clear face.
+
+```text
+$ python3 main.py img1.png img2.png --correspondence auto --transform affine --blend linear --frames 30 --no-display
+$ python3 main.py img1.png img2.png --correspondence auto --transform affine --blend laplacian --frames 30 --no-display
+```
+
+To save the automatically detected points and reuse them later:
+
+```text
+$ python3 main.py img1.png img2.png --correspondence auto --save-correspondences generated-images/auto_correspondences.json --frames 30 --no-display
+$ python3 main.py img1.png img2.png --correspondence auto --auto-correspondences generated-images/auto_correspondences.json --frames 30 --no-display
+```
+
+### TPS Transformation Examples
+
+Thin Plate Spline transformation is selected with `--transform tps`. It can be combined with manual or automatic correspondences and either blending method.
+
+```text
+$ python3 main.py img1.png img2.png --correspondence manual --transform tps --blend linear --frames 30
+$ python3 main.py img1.png img2.png --correspondence manual --transform tps --blend laplacian --frames 30
+$ python3 main.py img1.png img2.png --correspondence auto --transform tps --blend laplacian --frames 30 --no-display
+```
+
+Output folders:
+
+```text
+generated-images/manual-linear-dissolve/
+generated-images/manual-laplacian-pyramid-blending/
+generated-images/auto-linear-dissolve/
+generated-images/auto-laplacian-pyramid-blending/
+generated-images/tps-linear-dissolve/
+generated-images/tps-laplacian-pyramid-blending/
+```
+
+Note: `--multi-image ""` is not needed for normal two-image morphing. Leave `--multi-image` out unless you want to run the multi-image feature.
+
+The command below is the corrected version of the auto-correspondence plus Laplacian example. It uses the default affine transform and runs the two-image flow:
+
+```text
+$ python3 main.py img1.png img2.png --blend laplacian --correspondence auto --frames 30 --no-display
+```
 
 
 ## Multi Image Morphing
@@ -90,14 +144,38 @@ this involves finding the average morph posistion between all of the images, and
 
 
 ```text
-to use this capability add '--multi-image {directory of images}' to the command line. the program will ask you to manually pick your triangulation points, unless you have picked them in a previous iteration, in that case you can add the flag '--multi-image-trig saved'.
+to use this capability add '--multi-image {directory of images}' to the command line. the program will ask you to manually pick your triangulation points, unless you have picked them in a previous iteration, in that case you can add the flag '--multi-image-trigs saved'.
   
 the program defaults to the sequential image morphing and will ask you how many frames you would like to generate between images, but you can add the flag '--multi-image-proccess avg' to apply image average morphing.
 
 ```
 ```text
-$ python3 main.py img1.png img8.png --multi-image ./multi-input-images/ --blend linear --correspondence manual
-$ python3 main.py img1.png img8.png --multi-image ./multi-input-images/ --blend laplacian --correspondence manual
+$ python3 main.py img1.png img8.png --multi-image ./multi-input-images/ --blend linear --correspondence manual --frames 10
+$ python3 main.py img1.png img8.png --multi-image ./multi-input-images/ --blend laplacian --correspondence manual --frames 10
+```
+
+### Multi-Image TPS Demo
+
+Use `--transform tps` to run Thin Plate Spline warping through the whole multi-image sequence. It can be combined with `--blend linear` or `--blend laplacian`. Manual mode uses the saved or newly clicked control points for each image.
+
+```text
+$ python3 main.py img1.png img8.png --multi-image ./multi-input-images/ --correspondence manual --transform tps --blend linear --frames 10
+$ python3 main.py img1.png img8.png --multi-image ./multi-input-images/ --correspondence manual --transform tps --blend laplacian --frames 10
+```
+
+For an overall demo that combines multi-image morphing, automatic correspondence, TPS transformation, and Laplacian pyramid blending:
+
+```text
+$ python3 main.py img1.png img8.png --multi-image ./multi-input-images/ --correspondence auto --transform tps --blend laplacian --frames 10 --no-display
+```
+
+Output folders:
+
+```text
+generated-images/multi-input-linear-dissolve/
+generated-images/multi-input-laplacian-pyramid-blending/
+generated-images/multi-input-tps-linear-dissolve/
+generated-images/multi-input-tps-laplacian-pyramid-blending/
 ```
 
 <strong>Step-4</strong> Open the command line or terminal and enter the following to generate mp4 video or gif with all the intermediate images generated in step-3:
@@ -105,29 +183,39 @@ $ python3 main.py img1.png img8.png --multi-image ./multi-input-images/ --blend 
 
 ## install ffmpeg
 ```text
-$sudo apt update
-$sudo apt install ffmpeg
-$ffmpeg -version
+$ sudo apt update
+$ sudo apt install ffmpeg
+$ ffmpeg -version
 ```
 
 ## generate mp4 or gif
 ```text
-$ffmpeg -framerate 15 -i generated-images/linear-dissolve/inter_%d.jpg generated-images/linear-dissolve/output.gif
-$ffmpeg -framerate 15 -i generated-images/linear-dissolve/inter_%d.jpg generated-images/linear-dissolve/output.mp4
+$ ffmpeg -framerate 15 -start_number 1 -i generated-images/manual-linear-dissolve/inter_%d.jpg generated-images/manual-linear-dissolve/output.gif
+$ ffmpeg -framerate 15 -start_number 1 -i generated-images/manual-linear-dissolve/inter_%d.jpg generated-images/manual-linear-dissolve/output.mp4
 
-$ffmpeg -framerate 15 -i generated-images/laplacian-pyramid-blending/inter_%d.jpg generated-images/laplacian-pyramid-blending/output.gif
-$ffmpeg -framerate 15 -i generated-images/laplacian-pyramid-blending/inter_%d.jpg generated-images/laplacian-pyramid-blending/output.mp4
+$ ffmpeg -framerate 15 -start_number 1 -i generated-images/manual-laplacian-pyramid-blending/inter_%d.jpg generated-images/manual-laplacian-pyramid-blending/output.gif
+$ ffmpeg -framerate 15 -start_number 1 -i generated-images/manual-laplacian-pyramid-blending/inter_%d.jpg generated-images/manual-laplacian-pyramid-blending/output.mp4
 
-$ffmpeg -framerate 15 -i generated-images/tps-linear-dissolve/inter_%d.jpg generated-images/tps-linear-dissolve/output.gif
-$ffmpeg -framerate 15 -i generated-images/tps-linear-dissolve/inter_%d.jpg generated-images/tps-linear-dissolve/output.mp4
+$ ffmpeg -framerate 15 -start_number 1 -i generated-images/auto-linear-dissolve/inter_%d.jpg generated-images/auto-linear-dissolve/output.gif
+$ ffmpeg -framerate 15 -start_number 1 -i generated-images/auto-linear-dissolve/inter_%d.jpg generated-images/auto-linear-dissolve/output.mp4
 
-$ffmpeg -framerate 15 -i generated-images/tps-laplacian-pyramid-blending/inter_%d.jpg generated-images/tps-laplacian-pyramid-blending/output.gif
-$ffmpeg -framerate 15 -i generated-images/tps-laplacian-pyramid-blending/inter_%d.jpg generated-images/tps-laplacian-pyramid-blending/output.mp4
+$ ffmpeg -framerate 15 -start_number 1 -i generated-images/auto-laplacian-pyramid-blending/inter_%d.jpg generated-images/auto-laplacian-pyramid-blending/output.gif
+$ ffmpeg -framerate 15 -start_number 1 -i generated-images/auto-laplacian-pyramid-blending/inter_%d.jpg generated-images/auto-laplacian-pyramid-blending/output.mp4
 
-$ffmpeg -framerate 15 -i ./generated-images/multi-input-laplacian-pyramid-blending/inter_%d.jpg ./generated-images/multi-input-laplacian-pyramid-blending/output.gif
-$ffmpeg -framerate 15 -i ./generated-images/multi-input-laplacian-pyramid-blending/inter_%d.jpg ./generated-images/multi-input-laplacian-pyramid-blending/output.mp4
-$ffmpeg -framerate 15 -i ./generated-images/multi-input-linear-dissolve/inter_%d.jpg ./generated-images/multi-input-linear-dissolve/output.gif
-$ffmpeg -framerate 15 -i ./generated-images/multi-input-linear-dissolve/inter_%d.jpg ./generated-images/multi-input-linear-dissolve/output.mp4
+$ ffmpeg -framerate 15 -start_number 1 -i generated-images/tps-linear-dissolve/inter_%d.jpg generated-images/tps-linear-dissolve/output.gif
+$ ffmpeg -framerate 15 -start_number 1 -i generated-images/tps-linear-dissolve/inter_%d.jpg generated-images/tps-linear-dissolve/output.mp4
+
+$ ffmpeg -framerate 15 -start_number 1 -i generated-images/tps-laplacian-pyramid-blending/inter_%d.jpg generated-images/tps-laplacian-pyramid-blending/output.gif
+$ ffmpeg -framerate 15 -start_number 1 -i generated-images/tps-laplacian-pyramid-blending/inter_%d.jpg generated-images/tps-laplacian-pyramid-blending/output.mp4
+
+$ ffmpeg -framerate 15 -i generated-images/multi-input-laplacian-pyramid-blending/inter_%d.jpg generated-images/multi-input-laplacian-pyramid-blending/output.gif
+$ ffmpeg -framerate 15 -i generated-images/multi-input-laplacian-pyramid-blending/inter_%d.jpg generated-images/multi-input-laplacian-pyramid-blending/output.mp4
+$ ffmpeg -framerate 15 -i generated-images/multi-input-linear-dissolve/inter_%d.jpg generated-images/multi-input-linear-dissolve/output.gif
+$ ffmpeg -framerate 15 -i generated-images/multi-input-linear-dissolve/inter_%d.jpg generated-images/multi-input-linear-dissolve/output.mp4
+$ ffmpeg -framerate 15 -i generated-images/multi-input-tps-linear-dissolve/inter_%d.jpg generated-images/multi-input-tps-linear-dissolve/output.gif
+$ ffmpeg -framerate 15 -i generated-images/multi-input-tps-linear-dissolve/inter_%d.jpg generated-images/multi-input-tps-linear-dissolve/output.mp4
+$ ffmpeg -framerate 15 -i generated-images/multi-input-tps-laplacian-pyramid-blending/inter_%d.jpg generated-images/multi-input-tps-laplacian-pyramid-blending/output.gif
+$ ffmpeg -framerate 15 -i generated-images/multi-input-tps-laplacian-pyramid-blending/inter_%d.jpg generated-images/multi-input-tps-laplacian-pyramid-blending/output.mp4
 ```
 
 
@@ -174,6 +262,8 @@ CS445-final-project-image-morphing/
 │        ├── auto-linear-dissolve
 │        ├── multi-input-laplacian-pyramid-blending     # Multiple input images case
 │        ├── multi-input-linear-dissolve
+│        ├── multi-input-tps-linear-dissolve            # Multiple input images with TPS
+│        ├── multi-input-tps-laplacian-pyramid-blending # Multiple input images with TPS and Laplacian blending
 │        ├── tps-laplacian-pyramid-blending             # Tps transformation
 │        └── tps-linear-dissolve
 |

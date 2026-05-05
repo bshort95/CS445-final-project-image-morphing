@@ -16,6 +16,7 @@ from morphing_applications.multi_img_processing.utils import (
 )
 from morph.correspondences import (
     boundary_anchors,
+    detect_face_landmarks,
     get_automatic_face_points,
     get_manual_points,
     load_correspondences,
@@ -27,6 +28,11 @@ from morph.triangulation import triangulate_correspondences
 from morph.warp import (
     warp_image_affine_transform_with_laplacian_pyramid_blending,
     warp_image_affine_transform_with_linear_dissolve,
+)
+from morph.tps import (
+    warp_image_tps_transform_multiple_imgs,
+    warp_image_tps_with_laplacian_pyramid_blending,
+    warp_image_tps_with_linear_dissolve,
 )
 
 
@@ -47,6 +53,12 @@ def parse_args():
         help="Total output frames including endpoints, so inter_1 is source and inter_N is destination.",
     )
     parser.add_argument("--blend", choices=["linear", "laplacian"], default="laplacian")
+    parser.add_argument(
+        "--transform",
+        choices=["affine", "tps"],
+        default="affine",
+        help="Geometric warp model. Use tps for Thin Plate Spline transformation.",
+    )
     parser.add_argument("--no-display", action="store_true", help="Do not open OpenCV UI windows.")
     parser.add_argument(
         "--save-correspondences",
@@ -69,15 +81,11 @@ def parse_args():
         default="evaluation-results/manual-vs-auto",
         help="Output directory for compare-mode metrics and figures.",
     )
-    parser.add_argument("--multi-image", help="directory where multiple imges are kept")
-    parser.add_argument("--multi-image-proccess", help = "'seq' means you want to merge the images into a sequence of morphes, while 'avg' means you want to average the photos")
+    parser.add_argument("--multi-image", default="", help="directory where multiple imges are kept")
+    parser.add_argument("--multi-image-proccess", default="seq", help = "'seq' means you want to merge the images into a sequence of morphes, while 'avg' means you want to average the photos")
     parser.add_argument("--multi-image-trigs", help="enter saved if you want to used saved coordinate from last manual point selection")
     return parser.parse_args()
 
-from morph.warp import warp_image_affine_transform_with_linear_dissolve
-from morph.warp import warp_image_affine_transform_with_laplacian_pyramid_blending
-from morph.tps import warp_image_tps_with_linear_dissolve
-from morph.tps import warp_image_tps_with_laplacian_pyramid_blending
 from morph.triangulation import compute_delaunay
 
 #######################################################################################################################################
@@ -234,6 +242,24 @@ def get_compare_output_dirs(blend, manual_override=None, auto_override=None):
         auto_output = "generated-images/auto-laplacian-pyramid-blending"
     return manual_override or manual_output, auto_override or auto_output
 
+
+def collect_manual_correspondences(img1, img2, no_display=False):
+    if no_display:
+        return get_manual_points(img1, img2)
+
+    global im1, im2, coordSrc, coordDest
+    im1 = img1.copy()
+    im2 = img2.copy()
+    coordSrc = []
+    coordDest = []
+
+    cv2.namedWindow("source")
+    cv2.setMouseCallback("source", CallBackFuncForimg1)
+    getcoord("source", im1)
+    cv2.namedWindow("destination")
+    cv2.setMouseCallback("destination", CallBackFuncForimg2)
+    getcoord("destination", im2)
+
     if len(coordSrc) != len(coordDest):
         raise ValueError("Source and destination images must have the same number of control points.")
     if len(coordSrc) < 3:
@@ -242,28 +268,27 @@ def get_compare_output_dirs(blend, manual_override=None, auto_override=None):
     coordSrc = add_default_boundary_points(coordSrc, img1.shape)
     coordDest = add_default_boundary_points(coordDest, img2.shape)
     print("Added default boundary anchor points (corners plus quarter-edge anchors) to both images.")
+    return remove_duplicate_correspondences(coordSrc, coordDest)
 
-    method = input(
-        "Select morphing method ('affine-linear', 'affine-laplacian', 'tps-linear', 'tps-laplacian'): "
-    ).strip().lower()
-    no_of_intermed = int(input("Enter number of intermediate you want "))
 
-    if method.startswith("affine"):
-        # Triangulating the images and applying affine transformation
-        tri1,tri2 = showTriangulated(im1,im2)
-        print(f"@@ tri1 == {tri1}")
-        print(f"@@ tri2 == {tri2}")
+def show_triangulated(img1, img2, triangles1, triangles2, no_display=False):
+    tri_img1 = img1.copy()
+    tri_img2 = img2.copy()
+    tri1 = draw_delaunay(tri_img1, triangles1, (255, 0, 0))
+    tri2 = draw_delaunay(tri_img2, triangles2, (0, 255, 255))
 
-        if method == "affine-linear":
-            warp_image_affine_transform_with_linear_dissolve(no_of_intermed, img1, img2, tri1, tri2)
-        else:
-            warp_image_affine_transform_with_laplacian_pyramid_blending(no_of_intermed, img1, img2, tri1, tri2)
-    elif method == "tps-linear":
-        warp_image_tps_with_linear_dissolve(no_of_intermed, img1, img2, coordSrc, coordDest)
-    elif method == "tps-laplacian":
-        warp_image_tps_with_laplacian_pyramid_blending(no_of_intermed, img1, img2, coordSrc, coordDest)
-    else:
-        raise ValueError("Unknown morphing method selected.")
+    output_dir = Path("Triangulated Images")
+    output_dir.mkdir(parents=True, exist_ok=True)
+    cv2.imwrite(str(output_dir / "Triangulated Image_src.jpg"), tri_img1)
+    cv2.imwrite(str(output_dir / "Triangulated Image_dest.jpg"), tri_img2)
+
+    if not no_display:
+        cv2.imshow("src", tri_img1)
+        cv2.imshow("dest", tri_img2)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+
+    return tri1, tri2
 
 def existing_frame_paths(frame_dir, frame_count):
     paths = [Path(frame_dir) / f"inter_{idx}.jpg" for idx in range(1, frame_count + 1)]
@@ -282,6 +307,18 @@ def run_warp(frames, img1, img2, triangles1, triangles2, blend, output_dir, incl
     return warp_image_affine_transform_with_laplacian_pyramid_blending(
         frames, img1, img2, triangles1, triangles2, output_dir=output_dir, include_endpoints=include_endpoints
     )
+
+
+def run_tps_warp(frames, img1, img2, points1, points2, blend, output_dir, include_endpoints=False):
+    if include_endpoints:
+        raise ValueError("Original TPS mode supports --frames only, not --total-frames.")
+
+    if blend == "linear":
+        return warp_image_tps_with_linear_dissolve(frames, img1, img2, points1, points2, output_dir=output_dir)
+    else:
+        return warp_image_tps_with_laplacian_pyramid_blending(
+            frames, img1, img2, points1, points2, output_dir=output_dir
+        )
 
 
 def resolve_frame_request(args):
@@ -332,14 +369,27 @@ def run_single_mode(args, img1, img2):
             },
         )
 
-    triangles1, triangles2 = triangulate(points1, points2, prefer_scipy=prefer_scipy)
-    tri1, tri2 = show_triangulated(img1, img2, triangles1, triangles2, no_display=args.no_display)
     output_dir = get_output_dir(args.blend, args.correspondence, args.output_dir)
-    frame_paths = run_warp(frames, img1, img2, tri1, tri2, args.blend, output_dir, include_endpoints)
+    if args.transform == "tps":
+        if not args.output_dir:
+            output_dir = (
+                "generated-images/tps-linear-dissolve"
+                if args.blend == "linear"
+                else "generated-images/tps-laplacian-pyramid-blending"
+            )
+        frame_paths = run_tps_warp(frames, img1, img2, points1, points2, args.blend, output_dir, include_endpoints)
+    else:
+        method = "scipy" if prefer_scipy else "custom"
+        triangles1, triangles2 = triangulate_correspondences(points1, points2, method=method)
+        tri1, tri2 = show_triangulated(img1, img2, triangles1, triangles2, no_display=args.no_display)
+        frame_paths = run_warp(frames, img1, img2, tri1, tri2, args.blend, output_dir, include_endpoints)
     print(f"Generated {len(frame_paths)} frames in {output_dir}")
 
 
 def run_compare_mode(args, img1, img2):
+    if args.transform == "tps":
+        raise ValueError("--correspondence compare currently evaluates affine triangulation outputs; use --transform affine.")
+
     frames, include_endpoints = resolve_frame_request(args)
     manual_points1, manual_points2 = get_manual_correspondences(args, img1, img2)
     auto_points1, auto_points2 = get_auto_correspondences(args, img1, img2)
@@ -358,8 +408,10 @@ def run_compare_mode(args, img1, img2):
             metadata={"mode": "auto", "blend": args.blend, "frames": frames, "include_endpoints": include_endpoints},
         )
 
-    manual_triangles = triangulate(manual_points1, manual_points2, prefer_scipy=len(manual_points1) > 25)
-    auto_triangles = triangulate(auto_points1, auto_points2, prefer_scipy=True)
+    manual_triangles = triangulate_correspondences(
+        manual_points1, manual_points2, method="scipy" if len(manual_points1) > 25 else "custom"
+    )
+    auto_triangles = triangulate_correspondences(auto_points1, auto_points2, method="scipy")
 
     manual_output, auto_output = get_compare_output_dirs(args.blend, args.manual_frames_dir, args.auto_frames_dir)
 
@@ -406,32 +458,74 @@ def run_compare_mode(args, img1, img2):
     print(f"Evaluation metrics saved to {metrics_path}")
 
 
+def load_input_image(path_or_name):
+    path = Path(path_or_name)
+    if not path.exists():
+        path = Path("input-images") / path_or_name
+    img = cv2.imread(str(path))
+    if img is None:
+        raise FileNotFoundError(f"Could not read image: {path_or_name}")
+    return img
+
+
+def get_auto_multi_correspondences(imgs):
+    point_sets = []
+    for idx, img in enumerate(imgs):
+        points = detect_face_landmarks(img, include_boundary=True)
+        point_sets.append(points)
+        print(f"Detected {len(points)} automatic control points for multi-image input {idx}.")
+    point_count = len(point_sets[0])
+    if any(len(points) != point_count for points in point_sets):
+        raise ValueError("Automatic multi-image TPS requires the same number of landmarks in every image.")
+    return point_sets
+
+
+def run_multi_image_mode(args):
+    imgs = get_multi_input_images(args.multi_image)
+    imgs_original = [img.copy() for img in imgs]
+    frames = args.frames if args.frames is not None else int(input("how many frames between images would you like?"))
+    if frames < 1:
+        raise ValueError("--frames must be at least 1.")
+
+    if args.transform == "tps":
+        if args.correspondence == "auto":
+            point_sets = get_auto_multi_correspondences(imgs)
+        else:
+            if args.multi_image_trigs != "saved":
+                write_trig_files(imgs)
+            point_sets = read_trig_files()
+        output_dir = args.output_dir or (
+            "generated-images/multi-input-tps-linear-dissolve"
+            if args.blend == "linear"
+            else "generated-images/multi-input-tps-laplacian-pyramid-blending"
+        )
+        frame_paths = warp_image_tps_transform_multiple_imgs(
+            frames, imgs_original, point_sets, output_dir=output_dir, blend=args.blend
+        )
+        print(f"Generated {len(frame_paths)} TPS multi-image frames in {output_dir}.")
+        return
+
+    if args.multi_image_trigs != "saved":
+        write_trig_files(imgs)
+
+    trigs = read_trig_files()
+    tris = show_triangulated_for_muliple_imgs(imgs, trigs)
+
+    if args.multi_image_proccess == "avg":
+        create_avg_img(imgs, tris)
+    elif args.blend == "linear":
+        warp_image_affine_transform_multiple_imgs(frames, imgs_original, tris)
+    else:
+        warp_image_affine_transform_multiple_imgs_laplacian_pyramid_blending(frames, imgs_original, tris)
+
+
 def main():
     args = parse_args()
-    if args.multi_image != "":
-        imgs = get_multi_input_images(args.multi_image)
-        imgs_original = []
-        for i in range(len(imgs)):
-            imgs_original.append(imgs[i].copy())
-        
-        if args.multi_image_trigs != "saved":
-            write_trig_files(imgs)
-        
-        trigs = read_trig_files()
-        tris = show_triangulated_for_muliple_imgs(imgs,trigs)
-        
-        if args.multi_image_proccess == "avg":
-            create_avg_img(imgs,tris) 
-        else:
-            if args.blend == "linear":
-                warp_image_affine_transform_multiple_imgs(int(input("how many frames between images would you like?")),imgs_original,tris)    
-            else:
-                warp_image_affine_transform_multiple_imgs_laplacian_pyramid_blending(int(input("how many frames between images would you like?")),imgs_original,tris)
+    if args.multi_image:
+        run_multi_image_mode(args)
     else:
-        img1=cv2.imread("./input-images/"+ str(args.image1))
-        img2=cv2.imread("./input-images/"+ str(args.image2))
-        # img1, _ = load_image(args.image1)
-        # img2, _ = load_image(args.image2)
+        img1 = load_input_image(args.image1)
+        img2 = load_input_image(args.image2)
         img2 = cv2.resize(img2, (img1.shape[1], img1.shape[0]))
 
         if args.correspondence == "compare":
