@@ -115,9 +115,17 @@ def warp_image_with_tps(image, source_points, target_points, regularization=1e-5
     return warped.reshape(height, width, image.shape[2])
 
 
-def warp_image_tps_with_linear_dissolve(no_of_intermed, img1, img2, points1, points2):
+def warp_image_tps_with_linear_dissolve(
+    no_of_intermed,
+    img1,
+    img2,
+    points1,
+    points2,
+    output_dir="generated-images/tps-linear-dissolve",
+):
     n = no_of_intermed + 2
-    os.makedirs("generated-images/tps-linear-dissolve", exist_ok=True)
+    os.makedirs(output_dir, exist_ok=True)
+    frame_paths = []
 
     for k in range(1, no_of_intermed + 1):
         print(str(k) + " TPS intermediate is generating. Please wait...")
@@ -128,13 +136,24 @@ def warp_image_tps_with_linear_dissolve(no_of_intermed, img1, img2, points1, poi
         inter = (1.0 - alpha) * img1_warp + alpha * img2_warp
         inter = np.clip(inter, 0, 255).astype(np.uint8)
 
-        name = "generated-images/tps-linear-dissolve/inter_" + str(k) + ".jpg"
+        name = os.path.join(output_dir, "inter_" + str(k) + ".jpg")
         cv2.imwrite(name, inter)
+        frame_paths.append(name)
+
+    return frame_paths
 
 
-def warp_image_tps_with_laplacian_pyramid_blending(no_of_intermed, img1, img2, points1, points2):
+def warp_image_tps_with_laplacian_pyramid_blending(
+    no_of_intermed,
+    img1,
+    img2,
+    points1,
+    points2,
+    output_dir="generated-images/tps-laplacian-pyramid-blending",
+):
     n = no_of_intermed + 2
-    os.makedirs("generated-images/tps-laplacian-pyramid-blending", exist_ok=True)
+    os.makedirs(output_dir, exist_ok=True)
+    frame_paths = []
 
     for k in range(1, no_of_intermed + 1):
         print(str(k) + " TPS intermediate is generating. Please wait...")
@@ -145,5 +164,60 @@ def warp_image_tps_with_laplacian_pyramid_blending(no_of_intermed, img1, img2, p
         inter = laplacian_pyramid_blending(img1_warp, img2_warp, alpha)
         inter = np.clip(inter, 0, 255).astype(np.uint8)
 
-        name = "generated-images/tps-laplacian-pyramid-blending/inter_" + str(k) + ".jpg"
+        name = os.path.join(output_dir, "inter_" + str(k) + ".jpg")
         cv2.imwrite(name, inter)
+        frame_paths.append(name)
+
+    return frame_paths
+
+
+def warp_image_tps_transform_multiple_imgs(
+    no_of_intermed,
+    imgs,
+    point_sets,
+    output_dir="generated-images/multi-input-tps-linear-dissolve",
+    blend="linear",
+):
+    if len(imgs) != len(point_sets):
+        raise ValueError("Multi-image TPS requires one control-point set per image.")
+    if len(imgs) < 2:
+        raise ValueError("Multi-image TPS requires at least two images.")
+
+    point_count = len(point_sets[0])
+    if point_count < 3:
+        raise ValueError("Thin Plate Spline requires at least 3 control points.")
+    if any(len(points) != point_count for points in point_sets):
+        raise ValueError("Every multi-image TPS control-point set must have the same number of points.")
+
+    os.makedirs(output_dir, exist_ok=True)
+    frame_paths = []
+    frame_count = 0
+    n = no_of_intermed + 2
+
+    for image_idx in range(len(imgs) - 1):
+        img1 = imgs[image_idx]
+        img2 = imgs[image_idx + 1]
+        points1 = point_sets[image_idx]
+        points2 = point_sets[image_idx + 1]
+
+        for k in range(1, no_of_intermed + 1):
+            print(
+                str(k)
+                + f" TPS intermediate of image{image_idx} and image{image_idx + 1} is generating. Please wait..."
+            )
+            intermediate_points = get_intermediate_points(points1, points2, k, n)
+            img1_warp = warp_image_with_tps(img1, points1, intermediate_points)
+            img2_warp = warp_image_with_tps(img2, points2, intermediate_points)
+            alpha = k / n
+            if blend == "laplacian":
+                inter = laplacian_pyramid_blending(img1_warp, img2_warp, alpha)
+            else:
+                inter = (1.0 - alpha) * img1_warp + alpha * img2_warp
+            inter = np.clip(inter, 0, 255).astype(np.uint8)
+
+            name = os.path.join(output_dir, "inter_" + str(frame_count) + ".jpg")
+            cv2.imwrite(name, inter)
+            frame_paths.append(name)
+            frame_count += 1
+
+    return frame_paths
