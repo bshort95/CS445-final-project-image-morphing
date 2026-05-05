@@ -28,6 +28,10 @@ triangulation as well as the geometric transformation to the images. </p>
 <p>Morphing is primarily used in animation and special effects. In the present day,
 there exist many software programs like After Effects, Nuke, etc. This software can also be used by people
 who don’t know coding.</p>
+---
+---
+## We focus on:
+<p> We focus on advanced techniques that can enhance the morphing effect. For example, advanced geometric transformation, advanced image intensity blending, automatic landmark selecting and triangulation, supporting multiple input images bulk morphing, etc.</p>
 
 ---
 # Instructions to use the code
