@@ -39,7 +39,7 @@ The basic image morphing ordinarily includes:
 3. Manual control points selection
 4. No multiple-input image bulk morphing support
 
-Enhanced image morphing includes:
+Enhanced morphing features include:
 1. Multi-band Gaussian-Laplacian pyramid blending
 2. Advanced TPS (Thin Plate Splines) transformation
 3. Automatic feature point/landmark detection and triangulation
