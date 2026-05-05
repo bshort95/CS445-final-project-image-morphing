@@ -147,7 +147,7 @@ CS445-final-project-image-morphing/
 │        │        ├── inter_100.jpg
 │        │        ├── output.gif
 │        │        └── output.mp4
-│        ├── anual-linear-dissolve
+│        ├── manual-linear-dissolve
 │        │        ├── inter_1.jpg
 │        │        ├── inter_2.jpg
 │        │        ├── ..........
