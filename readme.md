@@ -6,11 +6,9 @@
 
 ---
 
-<br>
-
 ## Project overview:
 
-<strong>Sample ouput:</strong>
+<!-- <strong>Sample ouput:</strong> -->
 
 <!-- <img width="300" height="300" alt="image" src="https://github.com/user-attachments/assets/3207051d-6e26-4a34-b652-da9665d8486f" /> -->
 <img width="300" height="300" alt="output" src="https://github.com/user-attachments/assets/ffa70be3-dd75-46e5-9d0f-87322feb007c" />
@@ -23,6 +21,7 @@
 <img width="300" height="300" alt="output-5m" src="https://github.com/user-attachments/assets/842790cf-af68-4106-8f48-eee77d2ee2d7" />
 
 ---
+## Project overview:
 <p>Image morphing can be defined as a technique which constructs the sequence of images
 depicting the transition between them. The method that is used in this project involves using
 Delaunay Triangulation and Affine transformation.</p>
@@ -140,34 +139,27 @@ CS445-final-project-image-morphing/
 │        └── Triangulated Image_dest.jpg
 │
 ├── generated-images                # Directory saving all generated intermediate morphing images and generated MP4 and GIF files
-│        ├── manual-laplacian-pyramid-blending
+│        ├── manual-laplacian-pyramid-blending         # Laplacian pyramid blending
 │        │        ├── inter_1.jpg
 │        │        ├── inter_2.jpg
 │        │        ├── ..........
 │        │        ├── inter_100.jpg
 │        │        ├── output.gif
 │        │        └── output.mp4
-│        ├── manual-linear-dissolve
+│        ├── manual-linear-dissolve                    # Linear cross-dissolve blending
 │        │        ├── inter_1.jpg
 │        │        ├── inter_2.jpg
 │        │        ├── ..........
 │        │        ├── inter_100.jpg
 │        │        ├── output.gif
 │        │        └── output.mp4
-│        ├── auto-laplacian-pyramid-blending
+│        ├── auto-laplacian-pyramid-blending            # Automatic correspondence
 │        ├── auto-linear-dissolve
-│        ├── multi-input-laplacian-pyramid-blending
+│        ├── multi-input-laplacian-pyramid-blending     # Multiple input images case
 │        ├── multi-input-linear-dissolve
-│        ├── tps-laplacian-pyramid-blending
+│        ├── tps-laplacian-pyramid-blending             # Tps transformation
 │        └── tps-linear-dissolve
 |
-│
-├── generated-images-multi-inputs   # Multiple input images case
-│   ├── inter_1.jpg
-│   ├── inter_2.jpg
-│   ├── ..........
-│   ├── output.gif
-│   └── output.mp4
 │
 ├── evaluation-results
 │   ├── manual-vs-auto
@@ -183,6 +175,8 @@ CS445-final-project-image-morphing/
 │   ├── blend.py
 │   ├── correspondences.py
 │   ├── triangulation.py
+│   ├── evaluation.py
+│   ├── tps.py
 │   └── warp.py
 │
 ├── multi-input-images              # Directory for multiple input images, which will be used to generate multiple continuous morphing effects
@@ -191,7 +185,7 @@ CS445-final-project-image-morphing/
 │   ├── multi-image3.png
 │   └── .........
 │
-├── Report.pdf                      # Document
+├── requirements.txt                # Document
 │
 └── README.md
 
