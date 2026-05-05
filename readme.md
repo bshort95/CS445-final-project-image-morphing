@@ -127,7 +127,7 @@ CS445-final-project-image-morphing/
 |        |        ├── multi-input-triangulated-imgs
 |        |        ├── trig-files
 |        |        └── utils.py
-│        ├── application3
+│        ├── expression_transfer
 │        └── application4
 │
 ├── utils
