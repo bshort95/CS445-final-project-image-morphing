@@ -1,6 +1,6 @@
 import argparse
 from pathlib import Path
-
+import copy
 import cv2
 import numpy as np
 
@@ -506,7 +506,7 @@ def run_multi_image_mode(args):
         return
 
     if args.multi_image_trigs != "saved":
-        write_trig_files(imgs)
+        write_trig_files(copy.deepcopy(imgs))
 
     trigs = read_trig_files()
     tris = show_triangulated_for_muliple_imgs(imgs, trigs)
