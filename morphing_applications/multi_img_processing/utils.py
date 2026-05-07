@@ -139,7 +139,7 @@ def get_intermediate_triangle(tris):
         tri_level = [item[x] for item in tris]
 
         a = []
-        for y in range(len(tris)):
+        for y in range(3):
             tup_level =  [coord[y] for coord in tri_level]
             xi = int(np.mean([coord[0] for coord in tup_level]))        
             yi = int(np.mean([coord[1] for coord in tup_level]))
