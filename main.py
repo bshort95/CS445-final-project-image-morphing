@@ -484,7 +484,7 @@ def run_multi_image_mode(args):
     imgs = get_multi_input_images(args.multi_image)
     imgs_original = [img.copy() for img in imgs]
 
-    if args.multi_image_proccess != "avg":
+    if args.multi_image_process != "avg":
         frames = args.frames if args.frames is not None else int(input("how many frames between images would you like?"))
         if frames < 1:
             raise ValueError("--frames must be at least 1.")
