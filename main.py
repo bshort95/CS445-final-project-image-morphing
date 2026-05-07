@@ -483,27 +483,29 @@ def get_auto_multi_correspondences(imgs):
 def run_multi_image_mode(args):
     imgs = get_multi_input_images(args.multi_image)
     imgs_original = [img.copy() for img in imgs]
-    frames = args.frames if args.frames is not None else int(input("how many frames between images would you like?"))
-    if frames < 1:
-        raise ValueError("--frames must be at least 1.")
 
-    if args.transform == "tps":
-        if args.correspondence == "auto":
-            point_sets = get_auto_multi_correspondences(imgs)
-        else:
-            if args.multi_image_trigs != "saved":
-                write_trig_files(imgs)
-            point_sets = read_trig_files()
-        output_dir = args.output_dir or (
-            "generated-images/multi-input-tps-linear-dissolve"
-            if args.blend == "linear"
-            else "generated-images/multi-input-tps-laplacian-pyramid-blending"
-        )
-        frame_paths = warp_image_tps_transform_multiple_imgs(
-            frames, imgs_original, point_sets, output_dir=output_dir, blend=args.blend
-        )
-        print(f"Generated {len(frame_paths)} TPS multi-image frames in {output_dir}.")
-        return
+    if args.multi_image_proccess != "avg":
+        frames = args.frames if args.frames is not None else int(input("how many frames between images would you like?"))
+        if frames < 1:
+            raise ValueError("--frames must be at least 1.")
+
+        if args.transform == "tps":
+            if args.correspondence == "auto":
+                point_sets = get_auto_multi_correspondences(imgs)
+            else:
+                if args.multi_image_trigs != "saved":
+                    write_trig_files(imgs)
+                point_sets = read_trig_files()
+            output_dir = args.output_dir or (
+                "generated-images/multi-input-tps-linear-dissolve"
+                if args.blend == "linear"
+                else "generated-images/multi-input-tps-laplacian-pyramid-blending"
+            )
+            frame_paths = warp_image_tps_transform_multiple_imgs(
+                frames, imgs_original, point_sets, output_dir=output_dir, blend=args.blend
+            )
+            print(f"Generated {len(frame_paths)} TPS multi-image frames in {output_dir}.")
+            return
 
     if args.multi_image_trigs != "saved":
         write_trig_files(copy.deepcopy(imgs))
